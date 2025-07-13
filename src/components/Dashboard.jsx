@@ -12,7 +12,8 @@ import {
   FileText,
   AlertTriangle,
   Search,
-  Edit
+  Edit,
+  Settings
 } from 'lucide-react';
 import { db } from '../utils/storage';
 import { formatDuration, formatDate } from '../utils/dateHelpers';
