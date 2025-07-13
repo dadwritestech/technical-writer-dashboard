@@ -9,22 +9,15 @@ export default {
     // Dynamic color classes for content types and status badges
     {
       pattern: /bg-(blue|green|purple|yellow|gray|indigo|red|teal|orange)-(50|100|500|600|700|800|900)/,
+      variants: ['dark']
     },
     {
       pattern: /text-(blue|green|purple|yellow|gray|indigo|red|teal|orange)-(50|100|500|600|700|800|900)/,
+      variants: ['dark']
     },
     {
       pattern: /border-(blue|green|purple|yellow|gray|indigo|red|teal|orange)-(50|100|500|600|700|800|900)/,
-    },
-    // Dark mode variants
-    {
-      pattern: /dark:bg-(blue|green|purple|yellow|gray|indigo|red|teal|orange)-(50|100|500|600|700|800|900)/,
-    },
-    {
-      pattern: /dark:text-(blue|green|purple|yellow|gray|indigo|red|teal|orange)-(50|100|500|600|700|800|900)/,
-    },
-    {
-      pattern: /dark:border-(blue|green|purple|yellow|gray|indigo|red|teal|orange)-(50|100|500|600|700|800|900)/,
+      variants: ['dark']
     },
   ],
   theme: {
