@@ -13,9 +13,6 @@
     --toast-color: #f8fafc;
   }
   
-  * {
-    @apply border-border;
-  }
   
   body {
     @apply bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 dark:from-dark-900 dark:via-dark-800 dark:to-indigo-950 text-gray-900 dark:text-gray-100 transition-colors duration-300;
