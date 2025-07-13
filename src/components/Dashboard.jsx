@@ -97,7 +97,7 @@ const Dashboard = () => {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="stat-card">
+        <div className="stat-card group">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">Total Time Today</p>
@@ -114,7 +114,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="stat-card">
+        <div className="stat-card group">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">Research Time</p>
@@ -131,7 +131,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="stat-card">
+        <div className="stat-card group">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">Writing Time</p>
@@ -148,7 +148,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="stat-card">
+        <div className="stat-card group">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">Tasks Completed</p>

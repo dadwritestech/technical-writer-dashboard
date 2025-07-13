@@ -51,11 +51,15 @@
   }
   
   .stat-card {
-    @apply card group hover:scale-105 cursor-pointer overflow-hidden;
+    @apply card hover:scale-105 cursor-pointer overflow-hidden;
   }
   
   .stat-card .stat-icon {
-    @apply transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3;
+    @apply transition-transform duration-300;
+  }
+  
+  .stat-card:hover .stat-icon {
+    @apply scale-110 rotate-3;
   }
   
   .gradient-text {
@@ -63,7 +67,7 @@
   }
   
   .nav-link {
-    @apply relative px-4 py-2 rounded-xl transition-all duration-300 group;
+    @apply relative px-4 py-2 rounded-xl transition-all duration-300;
   }
   
   .nav-link.active {
