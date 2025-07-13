@@ -348,8 +348,8 @@ const Dashboard = () => {
             to="/settings"
             className="flex flex-col items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
           >
-            <Calendar className="w-8 h-8 text-primary-600 mb-2" />
-            <span className="text-sm font-medium">Schedule</span>
+            <Settings className="w-8 h-8 text-primary-600 mb-2" />
+            <span className="text-sm font-medium">Settings</span>
           </Link>
         </div>
       </div>
