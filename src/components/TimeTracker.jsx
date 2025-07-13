@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { 
   Play, 
@@ -19,7 +19,54 @@ import { db } from '../utils/storage';
 import { formatDuration, formatTime } from '../utils/dateHelpers';
 import { useTimeTracking } from '../hooks/useTimeTracking';
 import { contentTypes, workPhases, getContentTypeByValue, getWorkPhaseByValue } from '../utils/contentTypes';
+import { useOptimizedTimeBlocks } from '../hooks/useOptimizedQuery';
+import { usePagination } from '../hooks/usePagination';
+import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
+import { PERFORMANCE_LIMITS } from '../utils/constants';
+import VirtualizedList from './VirtualizedList';
+import Pagination from './Pagination';
+import { SkeletonList } from './SkeletonCard';
 import toast from 'react-hot-toast';
+
+// Memoized TimeBlock item component for performance
+const TimeBlockItem = React.memo(({ block }) => {
+  const workPhase = getWorkPhaseByValue(block.type);
+  const contentType = getContentTypeByValue(block.contentType);
+  const typeIcon = workPhase.value === 'research' ? Search :
+                  workPhase.value === 'writing' ? Edit :
+                  workPhase.value === 'review-editing' ? FileText :
+                  workPhase.value === 'version-updates' ? Upload :
+                  workPhase.value === 'publishing' ? Monitor :
+                  Settings;
+  
+  return (
+    <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-dark-700 rounded-lg">
+      <div className="flex items-center space-x-3">
+        <div className={`p-2 bg-${workPhase.color}-100 rounded-lg`}>
+          {React.createElement(typeIcon, { className: `w-5 h-5 text-${workPhase.color}-600` })}
+        </div>
+        <div>
+          <p className="font-medium">
+            {block.description || `${workPhase.label} - ${contentType.label}`}
+          </p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            {contentType.icon} {contentType.label} • {formatTime(block.startTime)} - {
+              block.endTime ? formatTime(block.endTime) : 'In progress'
+            }
+          </p>
+        </div>
+      </div>
+      <div className="text-right">
+        <p className="font-medium">
+          {formatDuration(block.duration || 0)}
+        </p>
+        <p className="text-sm text-gray-600 dark:text-gray-400">
+          {workPhase.label}
+        </p>
+      </div>
+    </div>
+  );
+});
 
 const TimeTracker = () => {
   const {
@@ -36,26 +83,54 @@ const TimeTracker = () => {
   const [selectedContentType, setSelectedContentType] = useState('user-guides');
   const [selectedProject, setSelectedProject] = useState('');
   const [description, setDescription] = useState('');
+  const [showHistory, setShowHistory] = useState(false);
 
-  // Get active projects for dropdown
+  // Get active projects for dropdown (optimized)
   const activeProjects = useLiveQuery(
-    () => db.projects.where('status').notEqual('archived').toArray(),
+    () => db.projects.where('status').notEqual('archived').limit(50).toArray(),
     []
   );
 
-  // Get today's time blocks
-  const todayBlocks = useLiveQuery(async () => {
+  // Get today's time blocks with optimization
+  const todayDateRange = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
     
+    return { start: today, end: tomorrow };
+  }, []);
+
+  const todayBlocks = useOptimizedTimeBlocks(todayDateRange, PERFORMANCE_LIMITS.timeTracker.maxSessionsDisplay);
+
+  // Pagination for today's sessions
+  const pagination = usePagination(todayBlocks || [], PERFORMANCE_LIMITS.timeTracker.maxSessionsDisplay);
+
+  // Infinite scroll for historical time blocks
+  const fetchHistoricalBlocks = async (page, limit) => {
+    const offset = page * limit;
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - 1); // Start from yesterday
+    
     return await db.timeBlocks
       .where('date')
-      .between(today.toISOString(), tomorrow.toISOString())
+      .below(cutoffDate.toISOString())
       .reverse()
+      .offset(offset)
+      .limit(limit)
       .toArray();
-  }, []);
+  };
+
+  const {
+    data: historicalBlocks,
+    loading: loadingHistory,
+    hasMore,
+    error: historyError,
+    handleScroll
+  } = useInfiniteScroll(fetchHistoricalBlocks, {
+    threshold: 100,
+    limit: PERFORMANCE_LIMITS.timeTracker.recentSessions
+  });
 
   const timeBlockTypes = workPhases.map(phase => ({
     value: phase.value,
@@ -236,52 +311,104 @@ const TimeTracker = () => {
 
       {/* Today's Time Blocks */}
       <div className="card">
-        <h3 className="text-lg font-semibold mb-4">Today's Sessions</h3>
-        {todayBlocks && todayBlocks.length > 0 ? (
-          <div className="space-y-3">
-            {todayBlocks.map((block) => {
-              const workPhase = getWorkPhaseByValue(block.type);
-              const contentType = getContentTypeByValue(block.contentType);
-              const typeIcon = workPhase.value === 'research' ? Search :
-                              workPhase.value === 'writing' ? Edit :
-                              workPhase.value === 'review-editing' ? FileText :
-                              workPhase.value === 'version-updates' ? Upload :
-                              workPhase.value === 'publishing' ? Monitor :
-                              Settings;
-              return (
-                <div
-                  key={block.id}
-                  className="flex items-center justify-between p-4 bg-gray-50 dark:bg-dark-700 rounded-lg"
-                >
-                  <div className="flex items-center space-x-3">
-                    <div className={`p-2 bg-${workPhase.color}-100 rounded-lg`}>
-                      {React.createElement(typeIcon, { className: `w-5 h-5 text-${workPhase.color}-600` })}
-                    </div>
-                    <div>
-                      <p className="font-medium">
-                        {block.description || `${workPhase.label} - ${contentType.label}`}
-                      </p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        {contentType.icon} {contentType.label} • {formatTime(block.startTime)} - {
-                          block.endTime ? formatTime(block.endTime) : 'In progress'
-                        }
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-medium">
-                      {formatDuration(block.duration || 0)}
-                    </p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {workPhase.label}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold">Today's Sessions</h3>
+          {todayBlocks && todayBlocks.length > PERFORMANCE_LIMITS.timeTracker.maxSessionsDisplay && (
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Showing {pagination.items.length} of {todayBlocks.length} sessions
+            </p>
+          )}
+        </div>
+        
+        {todayBlocks === undefined ? (
+          <SkeletonList count={3} />
+        ) : todayBlocks && todayBlocks.length > 0 ? (
+          <>
+            {todayBlocks.length > PERFORMANCE_LIMITS.timeTracker.maxSessionsDisplay ? (
+              // Use virtual scrolling for large lists
+              <VirtualizedList
+                items={pagination.items}
+                itemHeight={80}
+                containerHeight={400}
+                renderItem={(block) => <TimeBlockItem key={block.id} block={block} />}
+              />
+            ) : (
+              // Regular rendering for smaller lists
+              <div className="space-y-3">
+                {pagination.items.map((block) => (
+                  <TimeBlockItem key={block.id} block={block} />
+                ))}
+              </div>
+            )}
+            
+            {/* Pagination */}
+            {todayBlocks.length > PERFORMANCE_LIMITS.timeTracker.maxSessionsDisplay && (
+              <div className="mt-6">
+                <Pagination
+                  currentPage={pagination.currentPage}
+                  totalPages={pagination.totalPages}
+                  hasNextPage={pagination.hasNextPage}
+                  hasPrevPage={pagination.hasPrevPage}
+                  onPageChange={pagination.goToPage}
+                  totalItems={pagination.totalItems}
+                  itemsPerPage={PERFORMANCE_LIMITS.timeTracker.maxSessionsDisplay}
+                />
+              </div>
+            )}
+          </>
         ) : (
           <p className="text-gray-500 dark:text-gray-400">No time blocks recorded today yet.</p>
+        )}
+      </div>
+
+      {/* Historical Time Blocks Section */}
+      <div className="card">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold">Time Block History</h3>
+          <button
+            onClick={() => setShowHistory(!showHistory)}
+            className="btn-secondary"
+          >
+            {showHistory ? 'Hide History' : 'Show History'}
+          </button>
+        </div>
+        
+        {showHistory && (
+          <div>
+            {historyError ? (
+              <div className="text-red-600 dark:text-red-400 text-center py-4">
+                Error loading history: {historyError.message}
+              </div>
+            ) : historicalBlocks.length === 0 && !loadingHistory ? (
+              <p className="text-gray-500 dark:text-gray-400 text-center py-4">
+                No historical time blocks found.
+              </p>
+            ) : (
+              <div 
+                className="space-y-3 max-h-96 overflow-y-auto"
+                onScroll={handleScroll}
+              >
+                {historicalBlocks.map((block) => (
+                  <TimeBlockItem key={block.id} block={block} />
+                ))}
+                
+                {loadingHistory && (
+                  <div className="text-center py-4">
+                    <div className="inline-flex items-center space-x-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-600"></div>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Loading more...</span>
+                    </div>
+                  </div>
+                )}
+                
+                {!hasMore && historicalBlocks.length > 0 && (
+                  <div className="text-center py-4 text-sm text-gray-500 dark:text-gray-400">
+                    No more history to load
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         )}
       </div>
     </div>

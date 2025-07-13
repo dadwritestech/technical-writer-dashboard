@@ -17,10 +17,20 @@ import { contentTypes, documentVersions, maintenanceStatus, getContentTypeByValu
 import toast from 'react-hot-toast';
 import { SkeletonList } from './SkeletonCard';
 import MemoizedProjectCard from './MemoizedProjectCard';
+import { usePagination } from '../hooks/usePagination';
+import Pagination from './Pagination';
+import { PERFORMANCE_LIMITS } from '../utils/constants';
+import { debounce } from '../utils/performance';
 
 const ProjectManager = () => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingProject, setEditingProject] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filters, setFilters] = useState({
+    status: 'all',
+    team: 'all',
+    contentType: 'all'
+  });
   const [formData, setFormData] = useState({
     name: '',
     team: '',
@@ -33,9 +43,47 @@ const ProjectManager = () => {
     lastUpdated: new Date().toISOString().split('T')[0]
   });
 
-  // Get all projects
-  const projects = useLiveQuery(
+  // Get all projects with client-side filtering
+  const allProjects = useLiveQuery(
     () => db.projects.reverse().toArray(),
+    []
+  );
+
+  // Apply filters and search
+  const filteredProjects = useMemo(() => {
+    if (!allProjects) return [];
+    
+    return allProjects.filter(project => {
+      // Search filter
+      if (searchTerm) {
+        const searchLower = searchTerm.toLowerCase();
+        const matchesSearch = 
+          project.name.toLowerCase().includes(searchLower) ||
+          project.team.toLowerCase().includes(searchLower) ||
+          (project.description && project.description.toLowerCase().includes(searchLower));
+        
+        if (!matchesSearch) return false;
+      }
+      
+      // Status filter
+      if (filters.status !== 'all' && project.status !== filters.status) return false;
+      
+      // Team filter
+      if (filters.team !== 'all' && project.team !== filters.team) return false;
+      
+      // Content type filter
+      if (filters.contentType !== 'all' && project.contentType !== filters.contentType) return false;
+      
+      return true;
+    });
+  }, [allProjects, searchTerm, filters]);
+
+  // Pagination
+  const pagination = usePagination(filteredProjects, PERFORMANCE_LIMITS.projectsPage.itemsPerPage);
+
+  // Debounced search
+  const debouncedSearch = useMemo(
+    () => debounce((term) => setSearchTerm(term), PERFORMANCE_LIMITS.projectsPage.searchDebounce),
     []
   );
 
@@ -157,7 +205,12 @@ const ProjectManager = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Projects</h2>
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Projects</h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            {pagination.totalItems} total projects {filteredProjects.length !== allProjects?.length && `(${filteredProjects.length} filtered)`}
+          </p>
+        </div>
         <button
           onClick={() => setShowAddForm(!showAddForm)}
           className="btn-primary flex items-center space-x-2"
@@ -165,6 +218,75 @@ const ProjectManager = () => {
           <Plus className="w-5 h-5" />
           <span>New Project</span>
         </button>
+      </div>
+
+      {/* Search and Filters */}
+      <div className="card">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* Search */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Search Projects
+            </label>
+            <input
+              type="text"
+              placeholder="Search by name, team, or description..."
+              onChange={(e) => debouncedSearch(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 dark:border-dark-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-dark-800 dark:text-gray-200"
+            />
+          </div>
+
+          {/* Status Filter */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Status
+            </label>
+            <select
+              value={filters.status}
+              onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
+              className="w-full px-4 py-2 border border-gray-300 dark:border-dark-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-dark-800 dark:text-gray-200"
+            >
+              <option value="all">All Statuses</option>
+              {statuses.map(status => (
+                <option key={status.value} value={status.value}>{status.label}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Team Filter */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Team
+            </label>
+            <select
+              value={filters.team}
+              onChange={(e) => setFilters(prev => ({ ...prev, team: e.target.value }))}
+              className="w-full px-4 py-2 border border-gray-300 dark:border-dark-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-dark-800 dark:text-gray-200"
+            >
+              <option value="all">All Teams</option>
+              {teams.map(team => (
+                <option key={team} value={team}>{team}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Content Type Filter */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Content Type
+            </label>
+            <select
+              value={filters.contentType}
+              onChange={(e) => setFilters(prev => ({ ...prev, contentType: e.target.value }))}
+              className="w-full px-4 py-2 border border-gray-300 dark:border-dark-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-dark-800 dark:text-gray-200"
+            >
+              <option value="all">All Types</option>
+              {contentTypes.map(type => (
+                <option key={type.value} value={type.value}>{type.label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
       </div>
 
       {/* Add/Edit Form */}
@@ -354,31 +476,72 @@ const ProjectManager = () => {
       )}
 
       {/* Projects List */}
-      {projects === undefined ? (
+      {allProjects === undefined ? (
         <SkeletonList count={4} />
-      ) : (
-      <div className="responsive-grid">
-        {projects?.map((project) => (
-          <MemoizedProjectCard
-            key={project.id}
-            project={project}
-            onEdit={handleEdit}
-            onArchive={handleArchive}
-            getStatusIcon={getStatusIcon}
-            getStatusColor={getStatusColor}
-            getPriorityColor={getPriorityColor}
-            statuses={statuses}
-            priorities={priorities}
-          />
-        ))}
-      </div>
-      )}
-
-      {projects && projects.length === 0 && !showAddForm && (
+      ) : filteredProjects.length === 0 ? (
         <div className="text-center py-12">
           <Folder className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-500 dark:text-gray-400">No projects yet. Create your first project!</p>
+          <p className="text-gray-500 dark:text-gray-400">
+            {allProjects.length === 0 
+              ? "No projects yet. Create your first project!" 
+              : "No projects match your filters. Try adjusting your search criteria."
+            }
+          </p>
         </div>
+      ) : (
+        <>
+          {filteredProjects.length > PERFORMANCE_LIMITS.projectsPage.maxVisible ? (
+            // Use virtual scrolling for very large lists
+            <VirtualizedList
+              items={pagination.items}
+              itemHeight={200}
+              containerHeight={600}
+              renderItem={(project) => (
+                <div className="p-2">
+                  <MemoizedProjectCard
+                    key={project.id}
+                    project={project}
+                    onEdit={handleEdit}
+                    onArchive={handleArchive}
+                    getStatusIcon={getStatusIcon}
+                    getStatusColor={getStatusColor}
+                    getPriorityColor={getPriorityColor}
+                    statuses={statuses}
+                    priorities={priorities}
+                  />
+                </div>
+              )}
+            />
+          ) : (
+            // Regular grid for smaller lists
+            <div className="responsive-grid">
+              {pagination.items.map((project) => (
+                <MemoizedProjectCard
+                  key={project.id}
+                  project={project}
+                  onEdit={handleEdit}
+                  onArchive={handleArchive}
+                  getStatusIcon={getStatusIcon}
+                  getStatusColor={getStatusColor}
+                  getPriorityColor={getPriorityColor}
+                  statuses={statuses}
+                  priorities={priorities}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Pagination */}
+          <Pagination
+            currentPage={pagination.currentPage}
+            totalPages={pagination.totalPages}
+            hasNextPage={pagination.hasNextPage}
+            hasPrevPage={pagination.hasPrevPage}
+            onPageChange={pagination.goToPage}
+            totalItems={pagination.totalItems}
+            itemsPerPage={PERFORMANCE_LIMITS.projectsPage.itemsPerPage}
+          />
+        </>
       )}
     </div>
   );

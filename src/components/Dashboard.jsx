@@ -19,6 +19,7 @@ import { db } from '../utils/storage';
 import { formatDuration, formatDate } from '../utils/dateHelpers';
 import { useTimeTracking } from '../hooks/useTimeTracking';
 import { getContentTypeByValue, getWorkPhaseByValue, calculateMaintenanceStatus } from '../utils/contentTypes';
+import { useOptimizedDashboardData } from '../hooks/useOptimizedQuery';
 import LoadingSpinner from './LoadingSpinner';
 import { SkeletonList } from './SkeletonCard';
 
@@ -31,24 +32,8 @@ const Dashboard = () => {
     completedTasks: 0
   });
 
-  // Get today's time blocks
-  const todayBlocks = useLiveQuery(async () => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    
-    return await db.timeBlocks
-      .where('date')
-      .between(today.toISOString(), tomorrow.toISOString())
-      .toArray();
-  }, []);
-
-  // Get active projects
-  const activeProjects = useLiveQuery(
-    () => db.projects.where('status').notEqual('archived').toArray(),
-    []
-  );
+  // Get optimized dashboard data
+  const { todayBlocks, recentActiveProjects, documentationDebt } = useOptimizedDashboardData();
 
   // Calculate today's stats with memoization
   const todayStatsCalculated = useMemo(() => {
@@ -75,14 +60,7 @@ const Dashboard = () => {
     setTodayStats(todayStatsCalculated);
   }, [todayStatsCalculated]);
 
-  // Get projects with documentation debt (memoized)
-  const projectsWithDebt = useMemo(() => {
-    if (!activeProjects) return [];
-    return activeProjects.filter(project => {
-      const maintenance = calculateMaintenanceStatus(project.lastUpdated);
-      return maintenance === 'outdated' || maintenance === 'critical';
-    });
-  }, [activeProjects]);
+  // Documentation debt is now pre-calculated in the optimized query
 
   return (
     <div className="space-y-6">
@@ -172,7 +150,7 @@ const Dashboard = () => {
       </div>
 
       {/* Documentation Debt Alert */}
-      {projectsWithDebt && projectsWithDebt.length > 0 && (
+      {documentationDebt && documentationDebt.length > 0 && (
         <div className="debt-alert card border-l-4 border-orange-500 bg-gradient-to-r from-orange-50/80 to-red-50/80 dark:from-orange-900/20 dark:to-red-900/20 backdrop-blur-sm animate-slide-up">
           <div className="flex items-center space-x-3 mb-4">
             <div className="p-3 bg-gradient-to-br from-orange-500 to-red-600 rounded-xl animate-pulse-soft">
@@ -181,13 +159,13 @@ const Dashboard = () => {
             <div>
               <h3 className="text-xl font-bold text-orange-800 dark:text-orange-300">Documentation Debt Alert</h3>
               <p className="text-sm text-orange-600 dark:text-orange-400">
-                {projectsWithDebt.length} document{projectsWithDebt.length > 1 ? 's need' : ' needs'} immediate attention
+                {documentationDebt.length} document{documentationDebt.length > 1 ? 's need' : ' needs'} immediate attention
               </p>
             </div>
           </div>
           
           <div className="space-y-3">
-            {projectsWithDebt.slice(0, 3).map((project, index) => {
+            {documentationDebt.slice(0, 3).map((project, index) => {
               const contentType = getContentTypeByValue(project.contentType);
               const maintenance = calculateMaintenanceStatus(project.lastUpdated);
               return (
@@ -215,10 +193,10 @@ const Dashboard = () => {
             })}
           </div>
           
-          {projectsWithDebt.length > 3 && (
+          {documentationDebt.length > 3 && (
             <div className="mt-4 p-3 bg-white/50 dark:bg-dark-800/50 backdrop-blur-sm rounded-xl border border-orange-200/30 dark:border-orange-700/20">
               <p className="text-sm text-orange-700 dark:text-orange-300 font-medium">
-                📚 +{projectsWithDebt.length - 3} more documents need updates
+                📚 +{documentationDebt.length - 3} more documents need updates
               </p>
             </div>
           )}
@@ -278,12 +256,12 @@ const Dashboard = () => {
         </div>
 
         <div className="card">
-          <h3 className="text-lg font-semibold mb-4">Active Projects</h3>
-          {activeProjects === undefined ? (
+          <h3 className="text-lg font-semibold mb-4">Recent Projects</h3>
+          {recentActiveProjects === undefined ? (
             <LoadingSpinner text="Loading projects..." />
-          ) : activeProjects && activeProjects.length > 0 ? (
+          ) : recentActiveProjects && recentActiveProjects.length > 0 ? (
             <div className="space-y-2">
-              {activeProjects.slice(0, 5).map((project) => (
+              {recentActiveProjects.map((project) => (
                 <div
                   key={project.id}
                   className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
@@ -309,13 +287,13 @@ const Dashboard = () => {
               ))}
             </div>
           ) : (
-            <p className="text-gray-500 dark:text-gray-400">No active projects.</p>
+            <p className="text-gray-500 dark:text-gray-400">No recent projects.</p>
           )}
           <Link
             to="/projects"
             className="mt-4 block text-center btn-primary"
           >
-            Manage Projects
+            View All Projects
           </Link>
         </div>
       </div>

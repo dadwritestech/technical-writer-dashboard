@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { 
   FileText, 
@@ -13,6 +13,10 @@ import {
 } from 'lucide-react';
 import { db } from '../utils/storage';
 import { formatDuration, getWeekRange, formatDate } from '../utils/dateHelpers';
+import { useOptimizedWeeklyData } from '../hooks/useOptimizedQuery';
+import { PERFORMANCE_LIMITS } from '../utils/constants';
+import { SkeletonList } from './SkeletonCard';
+import LoadingSpinner from './LoadingSpinner';
 import toast from 'react-hot-toast';
 
 const WeeklySummary = () => {
@@ -21,62 +25,87 @@ const WeeklySummary = () => {
   const [inProgressItems, setInProgressItems] = useState(['']);
   const [emailSummary, setEmailSummary] = useState('');
 
-  // Get time blocks for the current week
-  const weeklyBlocks = useLiveQuery(async () => {
-    return await db.timeBlocks
-      .where('date')
-      .between(weekRange.start.toISOString(), weekRange.end.toISOString())
-      .toArray();
-  }, [weekRange]);
+  // Get optimized weekly data
+  const { timeBlocks: weeklyBlocks, projects } = useOptimizedWeeklyData(weekRange);
 
-  // Get projects data
-  const projects = useLiveQuery(() => db.projects.toArray(), []);
+  // Calculate weekly stats with performance optimization
+  const weeklyStats = useMemo(() => {
+    if (!weeklyBlocks || weeklyBlocks.length === 0) {
+      return { total: 0, deepWork: 0, meetings: 0, planning: 0, research: 0, writing: 0, review: 0 };
+    }
 
-  // Calculate weekly stats
-  const weeklyStats = React.useMemo(() => {
-    if (!weeklyBlocks) return { total: 0, deepWork: 0, meetings: 0, planning: 0 };
-
-    return weeklyBlocks.reduce((acc, block) => {
-      if (block.duration) {
-        acc.total += block.duration;
-        switch (block.type) {
-          case 'deep-work':
-            acc.deepWork += block.duration;
-            break;
-          case 'meeting':
-            acc.meetings += block.duration;
-            break;
-          case 'planning':
-            acc.planning += block.duration;
-            break;
+    // Process in chunks for large datasets
+    const chunkSize = 100;
+    let stats = { total: 0, deepWork: 0, meetings: 0, planning: 0, research: 0, writing: 0, review: 0 };
+    
+    for (let i = 0; i < weeklyBlocks.length; i += chunkSize) {
+      const chunk = weeklyBlocks.slice(i, i + chunkSize);
+      
+      const chunkStats = chunk.reduce((acc, block) => {
+        if (block.duration) {
+          acc.total += block.duration;
+          switch (block.type) {
+            case 'research':
+              acc.research += block.duration;
+              break;
+            case 'writing':
+              acc.writing += block.duration;
+              break;
+            case 'review-editing':
+              acc.review += block.duration;
+              break;
+            case 'deep-work':
+              acc.deepWork += block.duration;
+              break;
+            case 'meeting':
+              acc.meetings += block.duration;
+              break;
+            case 'planning':
+              acc.planning += block.duration;
+              break;
+          }
         }
-      }
-      return acc;
-    }, { total: 0, deepWork: 0, meetings: 0, planning: 0 });
+        return acc;
+      }, { total: 0, deepWork: 0, meetings: 0, planning: 0, research: 0, writing: 0, review: 0 });
+      
+      // Merge chunk stats
+      Object.keys(chunkStats).forEach(key => {
+        stats[key] += chunkStats[key];
+      });
+    }
+    
+    return stats;
   }, [weeklyBlocks]);
 
-  // Project time breakdown
-  const projectBreakdown = React.useMemo(() => {
-    if (!weeklyBlocks || !projects) return [];
+  // Project time breakdown with performance optimization
+  const projectBreakdown = useMemo(() => {
+    if (!weeklyBlocks || !projects || weeklyBlocks.length === 0) return [];
 
-    const breakdown = {};
+    const breakdown = new Map();
+    
+    // Process time blocks efficiently
     weeklyBlocks.forEach(block => {
       if (block.projectId && block.duration) {
-        if (!breakdown[block.projectId]) {
-          breakdown[block.projectId] = 0;
-        }
-        breakdown[block.projectId] += block.duration;
+        const current = breakdown.get(block.projectId) || 0;
+        breakdown.set(block.projectId, current + block.duration);
       }
     });
 
-    return Object.entries(breakdown).map(([projectId, minutes]) => {
-      const project = projects.find(p => p.id === parseInt(projectId));
-      return {
-        projectName: project?.name || 'Unknown Project',
-        team: project?.team || '',
-        minutes
-      };
-    }).sort((a, b) => b.minutes - a.minutes);
+    // Convert to sorted array, limit to top projects for performance
+    const result = Array.from(breakdown.entries())
+      .map(([projectId, minutes]) => {
+        const project = projects.find(p => p.id === parseInt(projectId));
+        return {
+          projectName: project?.name || 'Unknown Project',
+          team: project?.team || '',
+          minutes,
+          projectId
+        };
+      })
+      .sort((a, b) => b.minutes - a.minutes)
+      .slice(0, PERFORMANCE_LIMITS.weeklyReport.topProjects);
+
+    return result;
   }, [weeklyBlocks, projects]);
 
   const addCompletedItem = () => {
@@ -185,75 +214,110 @@ Generated on ${formatDate(new Date())}`;
       </div>
 
       {/* Weekly Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="card">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Total Time</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                {formatDuration(weeklyStats.total)}
-              </p>
-            </div>
-            <Clock className="w-8 h-8 text-primary-500" />
-          </div>
+      {weeklyBlocks === undefined ? (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <SkeletonList count={4} />
         </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="card">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Total Time</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                  {formatDuration(weeklyStats.total)}
+                </p>
+              </div>
+              <Clock className="w-8 h-8 text-primary-500" />
+            </div>
+          </div>
 
-        <div className="card">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Deep Work</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                {formatDuration(weeklyStats.deepWork)}
-              </p>
+          <div className="card">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Research & Writing</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                  {formatDuration(weeklyStats.research + weeklyStats.writing)}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-500">
+                  {weeklyStats.total > 0 && Math.round(((weeklyStats.research + weeklyStats.writing) / weeklyStats.total) * 100)}%
+                </p>
+              </div>
+              <Target className="w-8 h-8 text-purple-500" />
             </div>
-            <Target className="w-8 h-8 text-purple-500" />
           </div>
-        </div>
 
-        <div className="card">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Meetings</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                {formatDuration(weeklyStats.meetings)}
-              </p>
+          <div className="card">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Review & Editing</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                  {formatDuration(weeklyStats.review)}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-500">
+                  {weeklyStats.total > 0 && Math.round((weeklyStats.review / weeklyStats.total) * 100)}%
+                </p>
+              </div>
+              <CheckCircle className="w-8 h-8 text-green-500" />
             </div>
-            <CheckCircle className="w-8 h-8 text-green-500" />
           </div>
-        </div>
 
-        <div className="card">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Planning</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                {formatDuration(weeklyStats.planning)}
-              </p>
+          <div className="card">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Meetings & Planning</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                  {formatDuration(weeklyStats.meetings + weeklyStats.planning)}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-500">
+                  {weeklyStats.total > 0 && Math.round(((weeklyStats.meetings + weeklyStats.planning) / weeklyStats.total) * 100)}%
+                </p>
+              </div>
+              <TrendingUp className="w-8 h-8 text-blue-500" />
             </div>
-            <TrendingUp className="w-8 h-8 text-blue-500" />
           </div>
         </div>
-      </div>
+      )}
 
       {/* Project Breakdown */}
       <div className="card">
-        <h3 className="text-lg font-semibold mb-4">Project Time Allocation</h3>
-        {projectBreakdown.length > 0 ? (
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold">Project Time Allocation</h3>
+          {projectBreakdown.length >= PERFORMANCE_LIMITS.weeklyReport.topProjects && (
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Top {PERFORMANCE_LIMITS.weeklyReport.topProjects} projects
+            </p>
+          )}
+        </div>
+        
+        {weeklyBlocks === undefined ? (
+          <SkeletonList count={3} />
+        ) : projectBreakdown.length > 0 ? (
           <div className="space-y-3">
             {projectBreakdown.map((project, index) => (
-              <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-dark-700 rounded-lg">
-                <div>
-                  <p className="font-medium">{project.projectName}</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{project.team}</p>
+              <div key={project.projectId || index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-dark-700 rounded-lg">
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium truncate">{project.projectName}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 truncate">{project.team}</p>
                 </div>
-                <div className="text-right">
+                <div className="text-right ml-4">
                   <p className="font-medium">{formatDuration(project.minutes)}</p>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {Math.round((project.minutes / weeklyStats.total) * 100)}%
+                    {weeklyStats.total > 0 ? Math.round((project.minutes / weeklyStats.total) * 100) : 0}%
                   </p>
                 </div>
               </div>
             ))}
+            
+            {/* Show total time breakdown efficiency */}
+            <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-blue-700 dark:text-blue-300">Weekly Efficiency</span>
+                <span className="font-medium text-blue-800 dark:text-blue-200">
+                  {projectBreakdown.length} active projects
+                </span>
+              </div>
+            </div>
           </div>
         ) : (
           <p className="text-gray-500 dark:text-gray-400">No time tracked this week.</p>
