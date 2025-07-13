@@ -13,7 +13,7 @@ import {
   Edit,
   FileText,
   Upload,
-  Tool
+  Settings
 } from 'lucide-react';
 import { db } from '../utils/storage';
 import { formatDuration, formatTime } from '../utils/dateHelpers';
@@ -65,7 +65,7 @@ const TimeTracker = () => {
           phase.value === 'review-editing' ? FileText :
           phase.value === 'version-updates' ? Upload :
           phase.value === 'publishing' ? Monitor :
-          Tool,
+          Settings,
     color: phase.color
   }));
 
@@ -221,7 +221,7 @@ const TimeTracker = () => {
                               workPhase.value === 'review-editing' ? FileText :
                               workPhase.value === 'version-updates' ? Upload :
                               workPhase.value === 'publishing' ? Monitor :
-                              Tool;
+                              Settings;
               return (
                 <div
                   key={block.id}
