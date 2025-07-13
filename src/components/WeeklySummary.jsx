@@ -173,7 +173,7 @@ Generated on ${formatDate(new Date())}`;
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-900">Weekly Summary</h2>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Weekly Summary</h2>
         <div className="flex items-center space-x-4">
           <button onClick={goToPreviousWeek} className="btn-secondary">← Previous</button>
           <span className="font-medium">
@@ -189,8 +189,8 @@ Generated on ${formatDate(new Date())}`;
         <div className="card">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Total Time</p>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-sm text-gray-600 dark:text-gray-400">Total Time</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                 {formatDuration(weeklyStats.total)}
               </p>
             </div>
@@ -201,8 +201,8 @@ Generated on ${formatDate(new Date())}`;
         <div className="card">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Deep Work</p>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-sm text-gray-600 dark:text-gray-400">Deep Work</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                 {formatDuration(weeklyStats.deepWork)}
               </p>
             </div>
@@ -213,8 +213,8 @@ Generated on ${formatDate(new Date())}`;
         <div className="card">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Meetings</p>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-sm text-gray-600 dark:text-gray-400">Meetings</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                 {formatDuration(weeklyStats.meetings)}
               </p>
             </div>
@@ -225,8 +225,8 @@ Generated on ${formatDate(new Date())}`;
         <div className="card">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Planning</p>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-sm text-gray-600 dark:text-gray-400">Planning</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                 {formatDuration(weeklyStats.planning)}
               </p>
             </div>
@@ -244,11 +244,11 @@ Generated on ${formatDate(new Date())}`;
               <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-dark-700 rounded-lg">
                 <div>
                   <p className="font-medium">{project.projectName}</p>
-                  <p className="text-sm text-gray-600">{project.team}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{project.team}</p>
                 </div>
                 <div className="text-right">
                   <p className="font-medium">{formatDuration(project.minutes)}</p>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
                     {Math.round((project.minutes / weeklyStats.total) * 100)}%
                   </p>
                 </div>
@@ -256,7 +256,7 @@ Generated on ${formatDate(new Date())}`;
             ))}
           </div>
         ) : (
-          <p className="text-gray-500">No time tracked this week.</p>
+          <p className="text-gray-500 dark:text-gray-400">No time tracked this week.</p>
         )}
       </div>
 
@@ -285,7 +285,7 @@ Generated on ${formatDate(new Date())}`;
                 />
                 <button
                   onClick={() => removeCompletedItem(index)}
-                  className="p-2 text-gray-600 hover:text-red-600"
+                  className="p-2 text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
@@ -317,7 +317,7 @@ Generated on ${formatDate(new Date())}`;
                 />
                 <button
                   onClick={() => removeInProgressItem(index)}
-                  className="p-2 text-gray-600 hover:text-red-600"
+                  className="p-2 text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>

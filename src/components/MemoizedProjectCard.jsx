@@ -30,20 +30,20 @@ const ProjectCard = memo(({
             <h4 className="text-lg font-semibold">{project.name}</h4>
             <span className="text-lg">{contentType.icon}</span>
           </div>
-          <p className="text-sm text-gray-600">{project.team} • {contentType.label}</p>
-          <p className="text-xs text-gray-500">{version.label}</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">{project.team} • {contentType.label}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">{version.label}</p>
         </div>
         <div className="flex space-x-2">
           <button
             onClick={() => onEdit(project)}
-            className="p-2 text-gray-600 hover:text-gray-900"
+            className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
             aria-label="Edit project"
           >
             <Edit2 className="w-4 h-4" />
           </button>
           <button
             onClick={() => onArchive(project.id)}
-            className="p-2 text-gray-600 hover:text-gray-900"
+            className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
             aria-label="Archive project"
           >
             <Archive className="w-4 h-4" />
@@ -52,7 +52,7 @@ const ProjectCard = memo(({
       </div>
 
       {project.description && (
-        <p className="text-gray-600 text-sm mb-4">{project.description}</p>
+        <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">{project.description}</p>
       )}
 
       {/* Maintenance Status Alert */}
@@ -79,14 +79,14 @@ const ProjectCard = memo(({
           </div>
 
           {project.dueDate && (
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               Due: {formatDate(project.dueDate)}
             </p>
           )}
         </div>
 
         {project.lastUpdated && (
-          <div className="flex items-center justify-between text-xs text-gray-500">
+          <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
             <span>Last updated: {formatDate(project.lastUpdated)}</span>
             <span className={`px-2 py-1 rounded bg-${maintenance.color}-100 text-${maintenance.color}-700`}>
               {maintenance.label}

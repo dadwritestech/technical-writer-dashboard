@@ -89,8 +89,8 @@ const Dashboard = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Dashboard</h2>
-          <p className="text-gray-600">{formatDate(new Date())}</p>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Dashboard</h2>
+          <p className="text-gray-600 dark:text-gray-400">{formatDate(new Date())}</p>
         </div>
         {isActive && currentBlock && (
           <div className="flex items-center space-x-2 bg-green-50 text-green-700 px-4 py-2 rounded-lg">
@@ -252,7 +252,7 @@ const Dashboard = () => {
                         <p className="font-medium">
                           {block.description || `${workPhase.label} - ${contentType.label}`}
                         </p>
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
                           {contentType.icon} {contentType.label} • {formatDuration(block.duration || 0)}
                         </p>
                       </div>
@@ -267,7 +267,7 @@ const Dashboard = () => {
               })}
             </div>
           ) : (
-            <p className="text-gray-500">No time blocks recorded yet today.</p>
+            <p className="text-gray-500 dark:text-gray-400">No time blocks recorded yet today.</p>
           )}
           <Link
             to="/time"
@@ -290,12 +290,12 @@ const Dashboard = () => {
                 >
                   <div>
                     <p className="font-medium">{project.name}</p>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
                       {project.team} • {project.status}
                     </p>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <span className="text-sm text-gray-500">
+                    <span className="text-sm text-gray-500 dark:text-gray-400">
                       {project.progress || 0}%
                     </span>
                     <div className="w-20 h-2 bg-gray-200 rounded-full overflow-hidden">
@@ -309,7 +309,7 @@ const Dashboard = () => {
               ))}
             </div>
           ) : (
-            <p className="text-gray-500">No active projects.</p>
+            <p className="text-gray-500 dark:text-gray-400">No active projects.</p>
           )}
           <Link
             to="/projects"

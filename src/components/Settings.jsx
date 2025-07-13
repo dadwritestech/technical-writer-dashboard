@@ -77,7 +77,7 @@ const Settings = () => {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-gray-900">Settings</h2>
+      <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Settings</h2>
 
       {/* Data Management */}
       <div className="card">
@@ -94,10 +94,10 @@ const Settings = () => {
           </div>
 
           {/* Export Data */}
-          <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+          <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-dark-600 rounded-lg">
             <div>
               <h4 className="font-medium">Export Data</h4>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
                 Download a backup of all your data as a JSON file
               </p>
             </div>
@@ -111,10 +111,10 @@ const Settings = () => {
           </div>
 
           {/* Import Data */}
-          <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+          <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-dark-600 rounded-lg">
             <div>
               <h4 className="font-medium">Import Data</h4>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
                 Restore data from a backup file (this will replace all existing data)
               </p>
             </div>
@@ -150,7 +150,7 @@ const Settings = () => {
             <CheckCircle className="w-5 h-5 text-green-500 mt-0.5" />
             <div>
               <p className="font-medium">Local Storage Only</p>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
                 All your data is stored locally in your browser using IndexedDB. 
                 No data is sent to external servers.
               </p>
@@ -161,7 +161,7 @@ const Settings = () => {
             <CheckCircle className="w-5 h-5 text-green-500 mt-0.5" />
             <div>
               <p className="font-medium">No Analytics or Tracking</p>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
                 This application doesn't use any analytics, tracking, or third-party services.
               </p>
             </div>
@@ -171,7 +171,7 @@ const Settings = () => {
             <CheckCircle className="w-5 h-5 text-green-500 mt-0.5" />
             <div>
               <p className="font-medium">Offline Capable</p>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
                 The application works completely offline after the initial load.
               </p>
             </div>
@@ -230,7 +230,7 @@ const Settings = () => {
       {/* About */}
       <div className="card">
         <h3 className="text-lg font-semibold mb-4">About</h3>
-        <div className="space-y-2 text-sm text-gray-600">
+        <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
           <p><strong>Version:</strong> 1.0.0</p>
           <p><strong>Built with:</strong> React, Vite, Tailwind CSS, Dexie.js</p>
           <p><strong>License:</strong> MIT</p>

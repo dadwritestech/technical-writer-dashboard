@@ -100,17 +100,17 @@ const TimeTracker = () => {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-gray-900">Time Tracking</h2>
+      <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Time Tracking</h2>
 
       {/* Timer Display */}
       <div className="card text-center">
-        <div className="text-6xl font-mono font-bold text-gray-900 mb-4">
+        <div className="text-6xl font-mono font-bold text-gray-900 dark:text-gray-100 mb-4">
           {formatDuration(Math.floor(elapsedTime / 60))}
         </div>
         
         {currentBlock ? (
           <div className="space-y-4">
-            <p className="text-lg text-gray-600">
+            <p className="text-lg text-gray-600 dark:text-gray-400">
               {currentBlock.description || currentBlock.type}
             </p>
             <div className="flex justify-center space-x-4">
@@ -144,7 +144,7 @@ const TimeTracker = () => {
           <div className="space-y-4">
             {/* Work Phase Selection */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Work Phase</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Work Phase</label>
               <div className="grid grid-cols-3 gap-2">
                 {timeBlockTypes.map((type) => (
                   <button
@@ -159,7 +159,7 @@ const TimeTracker = () => {
                     <type.icon className={`w-5 h-5 mx-auto mb-1 ${
                       selectedType === type.value
                         ? `text-${type.color}-600`
-                        : 'text-gray-600'
+                        : 'text-gray-600 dark:text-gray-400'
                     }`} />
                     <span className="text-xs text-center">{type.label}</span>
                   </button>
@@ -169,11 +169,11 @@ const TimeTracker = () => {
 
             {/* Content Type Selection */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Content Type</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Content Type</label>
               <select
                 value={selectedContentType}
                 onChange={(e) => setSelectedContentType(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-dark-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-dark-800 dark:text-gray-200"
               >
                 {contentTypes.map((type) => (
                   <option key={type.value} value={type.value}>
@@ -185,11 +185,11 @@ const TimeTracker = () => {
 
             {/* Project Selection */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Project</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Project</label>
               <select
                 value={selectedProject}
                 onChange={(e) => setSelectedProject(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-dark-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-dark-800 dark:text-gray-200"
                 aria-describedby="project-error"
                 required
               >
@@ -207,13 +207,13 @@ const TimeTracker = () => {
 
             {/* Description */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Description *</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Description *</label>
               <input
                 type="text"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="What specific task are you working on?"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-dark-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-dark-800 dark:text-gray-200"
                 aria-describedby="description-error"
                 required
               />
@@ -261,7 +261,7 @@ const TimeTracker = () => {
                       <p className="font-medium">
                         {block.description || `${workPhase.label} - ${contentType.label}`}
                       </p>
-                      <p className="text-sm text-gray-600">
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
                         {contentType.icon} {contentType.label} • {formatTime(block.startTime)} - {
                           block.endTime ? formatTime(block.endTime) : 'In progress'
                         }
@@ -272,7 +272,7 @@ const TimeTracker = () => {
                     <p className="font-medium">
                       {formatDuration(block.duration || 0)}
                     </p>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
                       {workPhase.label}
                     </p>
                   </div>
@@ -281,7 +281,7 @@ const TimeTracker = () => {
             })}
           </div>
         ) : (
-          <p className="text-gray-500">No time blocks recorded today yet.</p>
+          <p className="text-gray-500 dark:text-gray-400">No time blocks recorded today yet.</p>
         )}
       </div>
     </div>
