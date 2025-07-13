@@ -241,7 +241,7 @@ Generated on ${formatDate(new Date())}`;
         {projectBreakdown.length > 0 ? (
           <div className="space-y-3">
             {projectBreakdown.map((project, index) => (
-              <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-dark-700 rounded-lg">
                 <div>
                   <p className="font-medium">{project.projectName}</p>
                   <p className="text-sm text-gray-600">{project.team}</p>
@@ -349,7 +349,7 @@ Generated on ${formatDate(new Date())}`;
               </button>
             </div>
           </div>
-          <pre className="bg-gray-50 p-4 rounded-lg text-sm whitespace-pre-wrap">
+          <pre className="bg-gray-50 dark:bg-dark-700 p-4 rounded-lg text-sm whitespace-pre-wrap">
             {emailSummary}
           </pre>
         </div>

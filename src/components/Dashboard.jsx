@@ -244,7 +244,7 @@ const Dashboard = () => {
                 return (
                   <div
                     key={block.id}
-                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                    className="flex items-center justify-between p-3 bg-gray-50 dark:bg-dark-700 rounded-lg"
                   >
                     <div className="flex items-center space-x-3">
                       <div className={`w-2 h-8 rounded bg-${workPhase.color}-500`} />
@@ -326,28 +326,28 @@ const Dashboard = () => {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Link
             to="/time"
-            className="flex flex-col items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+            className="flex flex-col items-center p-4 bg-gray-50 dark:bg-dark-700 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-600 transition-colors"
           >
             <Clock className="w-8 h-8 text-primary-600 mb-2" />
             <span className="text-sm font-medium">Start Timer</span>
           </Link>
           <Link
             to="/projects"
-            className="flex flex-col items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+            className="flex flex-col items-center p-4 bg-gray-50 dark:bg-dark-700 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-600 transition-colors"
           >
             <FolderOpen className="w-8 h-8 text-primary-600 mb-2" />
             <span className="text-sm font-medium">New Project</span>
           </Link>
           <Link
             to="/weekly"
-            className="flex flex-col items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+            className="flex flex-col items-center p-4 bg-gray-50 dark:bg-dark-700 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-600 transition-colors"
           >
             <FileText className="w-8 h-8 text-primary-600 mb-2" />
             <span className="text-sm font-medium">Weekly Report</span>
           </Link>
           <Link
             to="/settings"
-            className="flex flex-col items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+            className="flex flex-col items-center p-4 bg-gray-50 dark:bg-dark-700 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-600 transition-colors"
           >
             <Settings className="w-8 h-8 text-primary-600 mb-2" />
             <span className="text-sm font-medium">Settings</span>

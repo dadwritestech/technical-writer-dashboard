@@ -88,9 +88,9 @@ const Settings = () => {
 
         <div className="space-y-4">
           {/* Last Backup Info */}
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <p className="text-sm text-gray-600">Last Backup</p>
-            <p className="font-medium">{formatBackupDate(lastBackupDate)}</p>
+          <div className="bg-gray-50 dark:bg-dark-700 p-4 rounded-lg">
+            <p className="text-sm text-gray-600 dark:text-gray-400">Last Backup</p>
+            <p className="font-medium dark:text-gray-200">{formatBackupDate(lastBackupDate)}</p>
           </div>
 
           {/* Export Data */}

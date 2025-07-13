@@ -251,7 +251,7 @@ const TimeTracker = () => {
               return (
                 <div
                   key={block.id}
-                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+                  className="flex items-center justify-between p-4 bg-gray-50 dark:bg-dark-700 rounded-lg"
                 >
                   <div className="flex items-center space-x-3">
                     <div className={`p-2 bg-${workPhase.color}-100 rounded-lg`}>
