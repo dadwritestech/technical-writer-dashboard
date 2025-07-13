@@ -96,90 +96,131 @@ const Dashboard = () => {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="card">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="stat-card">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Total Time Today</p>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">Total Time Today</p>
+              <p className="text-3xl font-bold gradient-text mt-2">
                 {formatDuration(todayStats.totalMinutes)}
               </p>
+              <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                +12% from yesterday
+              </p>
             </div>
-            <Clock className="w-8 h-8 text-primary-500" />
+            <div className="stat-icon p-4 bg-gradient-to-br from-primary-500 to-primary-600 rounded-2xl shadow-lg">
+              <Clock className="w-8 h-8 text-white" />
+            </div>
           </div>
         </div>
 
-        <div className="card">
+        <div className="stat-card">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Research Time</p>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">Research Time</p>
+              <p className="text-3xl font-bold gradient-text mt-2">
                 {formatDuration(todayStats.researchMinutes)}
               </p>
-            </div>
-            <Search className="w-8 h-8 text-blue-500" />
-          </div>
-        </div>
-
-        <div className="card">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Tasks Completed</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {todayStats.completedTasks}
+              <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                Deep investigation
               </p>
             </div>
-            <CheckCircle className="w-8 h-8 text-green-500" />
+            <div className="stat-icon p-4 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl shadow-lg">
+              <Search className="w-8 h-8 text-white" />
+            </div>
           </div>
         </div>
 
-        <div className="card">
+        <div className="stat-card">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Writing Time</p>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">Writing Time</p>
+              <p className="text-3xl font-bold gradient-text mt-2">
                 {formatDuration(todayStats.writingMinutes)}
               </p>
+              <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                Creative flow
+              </p>
             </div>
-            <Edit className="w-8 h-8 text-green-500" />
+            <div className="stat-icon p-4 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl shadow-lg">
+              <Edit className="w-8 h-8 text-white" />
+            </div>
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">Tasks Completed</p>
+              <p className="text-3xl font-bold gradient-text mt-2">
+                {todayStats.completedTasks}
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                Great progress!
+              </p>
+            </div>
+            <div className="stat-icon p-4 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl shadow-lg">
+              <CheckCircle className="w-8 h-8 text-white" />
+            </div>
           </div>
         </div>
       </div>
 
       {/* Documentation Debt Alert */}
       {projectsWithDebt && projectsWithDebt.length > 0 && (
-        <div className="card border-orange-200 bg-orange-50">
-          <div className="flex items-center space-x-2 mb-4">
-            <AlertTriangle className="w-6 h-6 text-orange-600" />
-            <h3 className="text-lg font-semibold text-orange-800">Documentation Debt Alert</h3>
+        <div className="debt-alert card border-l-4 border-orange-500 bg-gradient-to-r from-orange-50/80 to-red-50/80 dark:from-orange-900/20 dark:to-red-900/20 backdrop-blur-sm animate-slide-up">
+          <div className="flex items-center space-x-3 mb-4">
+            <div className="p-3 bg-gradient-to-br from-orange-500 to-red-600 rounded-xl animate-pulse-soft">
+              <AlertTriangle className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-orange-800 dark:text-orange-300">Documentation Debt Alert</h3>
+              <p className="text-sm text-orange-600 dark:text-orange-400">
+                {projectsWithDebt.length} document{projectsWithDebt.length > 1 ? 's need' : ' needs'} immediate attention
+              </p>
+            </div>
           </div>
-          <p className="text-orange-700 mb-3">
-            {projectsWithDebt.length} document{projectsWithDebt.length > 1 ? 's need' : ' needs'} attention
-          </p>
-          <div className="space-y-2">
-            {projectsWithDebt.slice(0, 3).map((project) => {
+          
+          <div className="space-y-3">
+            {projectsWithDebt.slice(0, 3).map((project, index) => {
               const contentType = getContentTypeByValue(project.contentType);
               const maintenance = calculateMaintenanceStatus(project.lastUpdated);
               return (
-                <div key={project.id} className="flex items-center justify-between p-2 bg-white rounded border border-orange-200">
-                  <div className="flex items-center space-x-2">
-                    <span>{contentType.icon}</span>
-                    <span className="font-medium">{project.name}</span>
+                <div 
+                  key={project.id} 
+                  className="flex items-center justify-between p-4 bg-white/80 dark:bg-dark-800/80 backdrop-blur-sm rounded-xl border border-orange-200/50 dark:border-orange-700/30 hover:shadow-lg transition-all duration-300"
+                  style={{ animationDelay: `${index * 100}ms` }}
+                >
+                  <div className="flex items-center space-x-3">
+                    <span className="text-2xl">{contentType.icon}</span>
+                    <div>
+                      <span className="font-semibold text-gray-900 dark:text-gray-100">{project.name}</span>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">{contentType.label}</p>
+                    </div>
                   </div>
-                  <span className="text-sm text-orange-600">
-                    {maintenance === 'critical' ? 'Critical' : 'Outdated'}
+                  <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                    maintenance === 'critical' 
+                      ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' 
+                      : 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300'
+                  }`}>
+                    {maintenance === 'critical' ? '🚨 Critical' : '⚠️ Outdated'}
                   </span>
                 </div>
               );
             })}
           </div>
+          
           {projectsWithDebt.length > 3 && (
-            <p className="text-sm text-orange-600 mt-2">
-              +{projectsWithDebt.length - 3} more documents need updates
-            </p>
+            <div className="mt-4 p-3 bg-white/50 dark:bg-dark-800/50 backdrop-blur-sm rounded-xl border border-orange-200/30 dark:border-orange-700/20">
+              <p className="text-sm text-orange-700 dark:text-orange-300 font-medium">
+                📚 +{projectsWithDebt.length - 3} more documents need updates
+              </p>
+            </div>
           )}
-          <Link to="/projects" className="btn-primary mt-3 inline-block">
-            Review Documentation Debt
+          
+          <Link to="/projects" className="btn-primary mt-6 inline-flex items-center space-x-2 glow-effect">
+            <span>Review Documentation Debt</span>
+            <AlertTriangle className="w-4 h-4" />
           </Link>
         </div>
       )}
