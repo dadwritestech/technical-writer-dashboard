@@ -26,7 +26,7 @@ const Navigation = () => {
   ];
 
   return (
-    <nav className="backdrop-blur-md bg-white/80 dark:bg-dark-900/80 border-b border-white/20 dark:border-dark-700/50 sticky top-0 z-50">
+    <nav className="backdrop-blur-md bg-white/80 dark:bg-dark-900/80 border-b border-white/20 dark:border-dark-700/50 sticky top-0 z-50" role="navigation" aria-label="Main navigation">
       <div className="container mx-auto px-6">
         <div className="flex items-center justify-between h-20">
           <div className="flex items-center space-x-8">
@@ -51,9 +51,10 @@ const Navigation = () => {
                   className={({ isActive }) =>
                     `nav-link flex items-center space-x-2 text-sm font-medium ${isActive ? 'active' : ''}`
                   }
+                  aria-label={`Navigate to ${item.label}`}
                 >
                   <item.icon className="w-4 h-4" />
-                  <span>{item.label}</span>
+                  <span className="hidden lg:inline">{item.label}</span>
                 </NavLink>
               ))}
             </div>
@@ -64,6 +65,7 @@ const Navigation = () => {
               onClick={toggleTheme}
               className="relative p-3 rounded-xl bg-white/50 dark:bg-dark-700/50 backdrop-blur-sm border border-white/30 dark:border-dark-600/30 text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-all duration-300 hover:scale-110 hover:shadow-lg group"
               title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+              aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
             >
               <div className="relative w-5 h-5">
                 <Sun className={`absolute inset-0 w-5 h-5 transition-all duration-300 ${
@@ -78,6 +80,7 @@ const Navigation = () => {
             <button
               onClick={exportData}
               className="flex items-center space-x-2 px-4 py-3 bg-white/50 dark:bg-dark-700/50 backdrop-blur-sm border border-white/30 dark:border-dark-600/30 text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 rounded-xl text-sm font-medium transition-all duration-300 hover:scale-105 hover:shadow-lg"
+              aria-label="Export data backup"
             >
               <Download className="w-4 h-4" />
               <span className="hidden sm:inline">Backup</span>

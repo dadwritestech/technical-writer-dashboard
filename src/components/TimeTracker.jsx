@@ -69,11 +69,27 @@ const TimeTracker = () => {
     color: phase.color
   }));
 
-  const handleStart = () => {
+  const validateTimeTracker = () => {
+    const errors = [];
+    
     if (!selectedProject) {
-      toast.error('Please select a project');
+      errors.push('Please select a project');
+    }
+    
+    if (!description.trim()) {
+      errors.push('Please provide a task description');
+    }
+    
+    return errors;
+  };
+
+  const handleStart = () => {
+    const validationErrors = validateTimeTracker();
+    if (validationErrors.length > 0) {
+      validationErrors.forEach(error => toast.error(error));
       return;
     }
+    
     startTimeBlock(selectedType, selectedProject, description, selectedContentType);
     setDescription('');
   };
@@ -174,6 +190,8 @@ const TimeTracker = () => {
                 value={selectedProject}
                 onChange={(e) => setSelectedProject(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                aria-describedby="project-error"
+                required
               >
                 <option value="">Select a project...</option>
                 {activeProjects?.map((project) => (
@@ -182,18 +200,26 @@ const TimeTracker = () => {
                   </option>
                 ))}
               </select>
+              {!selectedProject && (
+                <p id="project-error" className="mt-1 text-sm text-red-600">Project selection is required</p>
+              )}
             </div>
 
             {/* Description */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Description *</label>
               <input
                 type="text"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="What specific task are you working on?"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                aria-describedby="description-error"
+                required
               />
+              {!description.trim() && (
+                <p id="description-error" className="mt-1 text-sm text-red-600">Task description is required</p>
+              )}
             </div>
 
             {/* Start Button */}

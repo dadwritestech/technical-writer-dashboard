@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Link } from 'react-router-dom';
 import { 
@@ -18,6 +18,8 @@ import { db } from '../utils/storage';
 import { formatDuration, formatDate } from '../utils/dateHelpers';
 import { useTimeTracking } from '../hooks/useTimeTracking';
 import { getContentTypeByValue, getWorkPhaseByValue, calculateMaintenanceStatus } from '../utils/contentTypes';
+import LoadingSpinner from './LoadingSpinner';
+import { SkeletonList } from './SkeletonCard';
 
 const Dashboard = () => {
   const { currentBlock, elapsedTime, isActive } = useTimeTracking();
@@ -47,37 +49,39 @@ const Dashboard = () => {
     []
   );
 
-  // Calculate today's stats
-  useEffect(() => {
-    if (todayBlocks) {
-      const stats = todayBlocks.reduce((acc, block) => {
-        if (block.duration) {
-          acc.totalMinutes += block.duration;
-          if (block.type === 'research') {
-            acc.researchMinutes += block.duration;
-          }
-          if (block.type === 'writing') {
-            acc.writingMinutes += block.duration;
-          }
-          if (block.status === 'completed') {
-            acc.completedTasks += 1;
-          }
+  // Calculate today's stats with memoization
+  const todayStatsCalculated = useMemo(() => {
+    if (!todayBlocks) return { totalMinutes: 0, researchMinutes: 0, writingMinutes: 0, completedTasks: 0 };
+    
+    return todayBlocks.reduce((acc, block) => {
+      if (block.duration) {
+        acc.totalMinutes += block.duration;
+        if (block.type === 'research') {
+          acc.researchMinutes += block.duration;
         }
-        return acc;
-      }, { totalMinutes: 0, researchMinutes: 0, writingMinutes: 0, completedTasks: 0 });
-      
-      setTodayStats(stats);
-    }
+        if (block.type === 'writing') {
+          acc.writingMinutes += block.duration;
+        }
+        if (block.status === 'completed') {
+          acc.completedTasks += 1;
+        }
+      }
+      return acc;
+    }, { totalMinutes: 0, researchMinutes: 0, writingMinutes: 0, completedTasks: 0 });
   }, [todayBlocks]);
 
-  // Get projects with documentation debt
-  const projectsWithDebt = useLiveQuery(async () => {
-    const allProjects = await db.projects.where('status').notEqual('archived').toArray();
-    return allProjects.filter(project => {
+  useEffect(() => {
+    setTodayStats(todayStatsCalculated);
+  }, [todayStatsCalculated]);
+
+  // Get projects with documentation debt (memoized)
+  const projectsWithDebt = useMemo(() => {
+    if (!activeProjects) return [];
+    return activeProjects.filter(project => {
       const maintenance = calculateMaintenanceStatus(project.lastUpdated);
       return maintenance === 'outdated' || maintenance === 'critical';
     });
-  }, []);
+  }, [activeProjects]);
 
   return (
     <div className="space-y-6">
@@ -96,20 +100,20 @@ const Dashboard = () => {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="responsive-grid lg:grid-cols-4">
         <div className="stat-card group">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">Total Time Today</p>
-              <p className="text-3xl font-bold gradient-text mt-2">
+              <p className="responsive-text-sm text-gray-600 dark:text-gray-400 font-medium">Total Time Today</p>
+              <p className="text-2xl md:text-3xl font-bold gradient-text mt-2">
                 {formatDuration(todayStats.totalMinutes)}
               </p>
               <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
                 +12% from yesterday
               </p>
             </div>
-            <div className="stat-icon p-4 bg-gradient-to-br from-primary-500 to-primary-600 rounded-2xl shadow-lg">
-              <Clock className="w-8 h-8 text-white" />
+            <div className="stat-icon p-3 md:p-4 bg-gradient-to-br from-primary-500 to-primary-600 rounded-2xl shadow-lg">
+              <Clock className="w-6 h-6 md:w-8 md:h-8 text-white" />
             </div>
           </div>
         </div>
@@ -229,7 +233,9 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="card">
           <h3 className="text-lg font-semibold mb-4">Today's Time Blocks</h3>
-          {todayBlocks && todayBlocks.length > 0 ? (
+          {todayBlocks === undefined ? (
+            <LoadingSpinner text="Loading time blocks..." />
+          ) : todayBlocks && todayBlocks.length > 0 ? (
             <div className="space-y-2">
               {todayBlocks.map((block) => {
                 const workPhase = getWorkPhaseByValue(block.type);
@@ -272,7 +278,9 @@ const Dashboard = () => {
 
         <div className="card">
           <h3 className="text-lg font-semibold mb-4">Active Projects</h3>
-          {activeProjects && activeProjects.length > 0 ? (
+          {activeProjects === undefined ? (
+            <LoadingSpinner text="Loading projects..." />
+          ) : activeProjects && activeProjects.length > 0 ? (
             <div className="space-y-2">
               {activeProjects.slice(0, 5).map((project) => (
                 <div

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { 
   Plus, 
@@ -15,6 +15,8 @@ import { db, saveProject, updateProject } from '../utils/storage';
 import { formatDate } from '../utils/dateHelpers';
 import { contentTypes, documentVersions, maintenanceStatus, getContentTypeByValue, getVersionByValue, getMaintenanceStatusByValue, calculateMaintenanceStatus } from '../utils/contentTypes';
 import toast from 'react-hot-toast';
+import { SkeletonList } from './SkeletonCard';
+import MemoizedProjectCard from './MemoizedProjectCard';
 
 const ProjectManager = () => {
   const [showAddForm, setShowAddForm] = useState(false);
@@ -51,8 +53,32 @@ const ProjectManager = () => {
     { value: 'low', label: 'Low', color: 'green' }
   ];
 
+  const validateForm = () => {
+    const errors = [];
+    
+    if (!formData.name.trim()) {
+      errors.push('Project name is required');
+    }
+    
+    if (!formData.team) {
+      errors.push('Team selection is required');
+    }
+    
+    if (formData.dueDate && new Date(formData.dueDate) < new Date()) {
+      errors.push('Due date cannot be in the past');
+    }
+    
+    return errors;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    const validationErrors = validateForm();
+    if (validationErrors.length > 0) {
+      validationErrors.forEach(error => toast.error(error));
+      return;
+    }
     
     try {
       const projectData = {
@@ -86,7 +112,7 @@ const ProjectManager = () => {
     }
   };
 
-  const handleEdit = (project) => {
+  const handleEdit = useCallback((project) => {
     setEditingProject(project);
     setFormData({
       name: project.name,
@@ -100,12 +126,12 @@ const ProjectManager = () => {
       lastUpdated: project.lastUpdated || new Date().toISOString().split('T')[0]
     });
     setShowAddForm(true);
-  };
+  }, []);
 
-  const handleArchive = async (projectId) => {
+  const handleArchive = useCallback(async (projectId) => {
     await updateProject(projectId, { status: 'archived' });
     toast.success('Project archived');
-  };
+  }, []);
 
   const getStatusIcon = (status) => {
     switch (status) {
@@ -159,7 +185,11 @@ const ProjectManager = () => {
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   required
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  aria-describedby="name-error"
                 />
+                {!formData.name.trim() && (
+                  <p id="name-error" className="mt-1 text-sm text-red-600">Project name is required</p>
+                )}
               </div>
               
               <div>
@@ -188,12 +218,16 @@ const ProjectManager = () => {
                   onChange={(e) => setFormData({ ...formData, team: e.target.value })}
                   required
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  aria-describedby="team-error"
                 >
                   <option value="">Select team...</option>
                   {teams.map((team) => (
                     <option key={team} value={team}>{team}</option>
                   ))}
                 </select>
+                {!formData.team && (
+                  <p id="team-error" className="mt-1 text-sm text-red-600">Team selection is required</p>
+                )}
               </div>
 
               <div>
@@ -255,8 +289,13 @@ const ProjectManager = () => {
                   type="date"
                   value={formData.dueDate}
                   onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
+                  min={new Date().toISOString().split('T')[0]}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  aria-describedby="due-date-error"
                 />
+                {formData.dueDate && new Date(formData.dueDate) < new Date() && (
+                  <p id="due-date-error" className="mt-1 text-sm text-red-600">Due date cannot be in the past</p>
+                )}
               </div>
 
               <div>
@@ -315,93 +354,27 @@ const ProjectManager = () => {
       )}
 
       {/* Projects List */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {projects?.map((project) => {
-          const StatusIcon = getStatusIcon(project.status);
-          const statusColor = getStatusColor(project.status);
-          const priorityColor = getPriorityColor(project.priority);
-          const contentType = getContentTypeByValue(project.contentType);
-          const version = getVersionByValue(project.version);
-          const maintenance = getMaintenanceStatusByValue(
-            project.maintenanceStatus || calculateMaintenanceStatus(project.lastUpdated)
-          );
-          
-          return (
-            <div key={project.id} className="card">
-              <div className="flex justify-between items-start mb-4">
-                <div className="flex-1">
-                  <div className="flex items-center space-x-2 mb-1">
-                    <h4 className="text-lg font-semibold">{project.name}</h4>
-                    <span className="text-lg">{contentType.icon}</span>
-                  </div>
-                  <p className="text-sm text-gray-600">{project.team} • {contentType.label}</p>
-                  <p className="text-xs text-gray-500">{version.label}</p>
-                </div>
-                <div className="flex space-x-2">
-                  <button
-                    onClick={() => handleEdit(project)}
-                    className="p-2 text-gray-600 hover:text-gray-900"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleArchive(project.id)}
-                    className="p-2 text-gray-600 hover:text-gray-900"
-                  >
-                    <Archive className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-
-              {project.description && (
-                <p className="text-gray-600 text-sm mb-4">{project.description}</p>
-              )}
-
-              {/* Maintenance Status Alert */}
-              {(maintenance.value === 'outdated' || maintenance.value === 'critical') && (
-                <div className={`flex items-center space-x-2 p-2 mb-3 rounded-lg bg-${maintenance.color}-50 border border-${maintenance.color}-200`}>
-                  <AlertTriangle className={`w-4 h-4 text-${maintenance.color}-600`} />
-                  <span className={`text-sm text-${maintenance.color}-700`}>
-                    Documentation Debt: {maintenance.label}
-                  </span>
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <span className={`flex items-center space-x-1 text-sm px-2 py-1 bg-${statusColor}-100 text-${statusColor}-700 rounded`}>
-                      <StatusIcon className="w-4 h-4" />
-                      <span>{statuses.find(s => s.value === project.status)?.label}</span>
-                    </span>
-                    
-                    <span className={`text-sm px-2 py-1 bg-${priorityColor}-100 text-${priorityColor}-700 rounded`}>
-                      {priorities.find(p => p.value === project.priority)?.label}
-                    </span>
-                  </div>
-
-                  {project.dueDate && (
-                    <p className="text-sm text-gray-600">
-                      Due: {formatDate(project.dueDate)}
-                    </p>
-                  )}
-                </div>
-
-                {project.lastUpdated && (
-                  <div className="flex items-center justify-between text-xs text-gray-500">
-                    <span>Last updated: {formatDate(project.lastUpdated)}</span>
-                    <span className={`px-2 py-1 rounded bg-${maintenance.color}-100 text-${maintenance.color}-700`}>
-                      {maintenance.label}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
+      {projects === undefined ? (
+        <SkeletonList count={4} />
+      ) : (
+      <div className="responsive-grid">
+        {projects?.map((project) => (
+          <MemoizedProjectCard
+            key={project.id}
+            project={project}
+            onEdit={handleEdit}
+            onArchive={handleArchive}
+            getStatusIcon={getStatusIcon}
+            getStatusColor={getStatusColor}
+            getPriorityColor={getPriorityColor}
+            statuses={statuses}
+            priorities={priorities}
+          />
+        ))}
       </div>
+      )}
 
-      {(!projects || projects.length === 0) && !showAddForm && (
+      {projects && projects.length === 0 && !showAddForm && (
         <div className="text-center py-12">
           <Folder className="w-12 h-12 text-gray-400 mx-auto mb-4" />
           <p className="text-gray-500">No projects yet. Create your first project!</p>
