@@ -10,7 +10,7 @@ import Settings from './components/Settings';
 
 function App() {
   return (
-    <Router basename="/techwriter-dashboard">
+    <Router basename="/technical-writer-dashboard">
       <div className="min-h-screen bg-gray-50">
         <Navigation />
         <main className="container mx-auto px-4 py-8">
