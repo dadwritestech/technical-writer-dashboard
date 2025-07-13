@@ -9,17 +9,22 @@ import {
   Calendar,
   Target,
   FolderOpen,
-  FileText
+  FileText,
+  AlertTriangle,
+  Search,
+  Edit
 } from 'lucide-react';
 import { db } from '../utils/storage';
 import { formatDuration, formatDate } from '../utils/dateHelpers';
 import { useTimeTracking } from '../hooks/useTimeTracking';
+import { getContentTypeByValue, getWorkPhaseByValue, calculateMaintenanceStatus } from '../utils/contentTypes';
 
 const Dashboard = () => {
   const { currentBlock, elapsedTime, isActive } = useTimeTracking();
   const [todayStats, setTodayStats] = useState({
     totalMinutes: 0,
-    deepWorkMinutes: 0,
+    researchMinutes: 0,
+    writingMinutes: 0,
     completedTasks: 0
   });
 
@@ -48,19 +53,31 @@ const Dashboard = () => {
       const stats = todayBlocks.reduce((acc, block) => {
         if (block.duration) {
           acc.totalMinutes += block.duration;
-          if (block.type === 'deep-work') {
-            acc.deepWorkMinutes += block.duration;
+          if (block.type === 'research') {
+            acc.researchMinutes += block.duration;
+          }
+          if (block.type === 'writing') {
+            acc.writingMinutes += block.duration;
           }
           if (block.status === 'completed') {
             acc.completedTasks += 1;
           }
         }
         return acc;
-      }, { totalMinutes: 0, deepWorkMinutes: 0, completedTasks: 0 });
+      }, { totalMinutes: 0, researchMinutes: 0, writingMinutes: 0, completedTasks: 0 });
       
       setTodayStats(stats);
     }
   }, [todayBlocks]);
+
+  // Get projects with documentation debt
+  const projectsWithDebt = useLiveQuery(async () => {
+    const allProjects = await db.projects.where('status').notEqual('archived').toArray();
+    return allProjects.filter(project => {
+      const maintenance = calculateMaintenanceStatus(project.lastUpdated);
+      return maintenance === 'outdated' || maintenance === 'critical';
+    });
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -95,12 +112,12 @@ const Dashboard = () => {
         <div className="card">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Deep Work</p>
+              <p className="text-sm text-gray-600">Research Time</p>
               <p className="text-2xl font-bold text-gray-900">
-                {formatDuration(todayStats.deepWorkMinutes)}
+                {formatDuration(todayStats.researchMinutes)}
               </p>
             </div>
-            <Target className="w-8 h-8 text-purple-500" />
+            <Search className="w-8 h-8 text-blue-500" />
           </div>
         </div>
 
@@ -119,15 +136,53 @@ const Dashboard = () => {
         <div className="card">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Active Projects</p>
+              <p className="text-sm text-gray-600">Writing Time</p>
               <p className="text-2xl font-bold text-gray-900">
-                {activeProjects?.length || 0}
+                {formatDuration(todayStats.writingMinutes)}
               </p>
             </div>
-            <TrendingUp className="w-8 h-8 text-blue-500" />
+            <Edit className="w-8 h-8 text-green-500" />
           </div>
         </div>
       </div>
+
+      {/* Documentation Debt Alert */}
+      {projectsWithDebt && projectsWithDebt.length > 0 && (
+        <div className="card border-orange-200 bg-orange-50">
+          <div className="flex items-center space-x-2 mb-4">
+            <AlertTriangle className="w-6 h-6 text-orange-600" />
+            <h3 className="text-lg font-semibold text-orange-800">Documentation Debt Alert</h3>
+          </div>
+          <p className="text-orange-700 mb-3">
+            {projectsWithDebt.length} document{projectsWithDebt.length > 1 ? 's need' : ' needs'} attention
+          </p>
+          <div className="space-y-2">
+            {projectsWithDebt.slice(0, 3).map((project) => {
+              const contentType = getContentTypeByValue(project.contentType);
+              const maintenance = calculateMaintenanceStatus(project.lastUpdated);
+              return (
+                <div key={project.id} className="flex items-center justify-between p-2 bg-white rounded border border-orange-200">
+                  <div className="flex items-center space-x-2">
+                    <span>{contentType.icon}</span>
+                    <span className="font-medium">{project.name}</span>
+                  </div>
+                  <span className="text-sm text-orange-600">
+                    {maintenance === 'critical' ? 'Critical' : 'Outdated'}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+          {projectsWithDebt.length > 3 && (
+            <p className="text-sm text-orange-600 mt-2">
+              +{projectsWithDebt.length - 3} more documents need updates
+            </p>
+          )}
+          <Link to="/projects" className="btn-primary mt-3 inline-block">
+            Review Documentation Debt
+          </Link>
+        </div>
+      )}
 
       {/* Today's Schedule */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -135,32 +190,33 @@ const Dashboard = () => {
           <h3 className="text-lg font-semibold mb-4">Today's Time Blocks</h3>
           {todayBlocks && todayBlocks.length > 0 ? (
             <div className="space-y-2">
-              {todayBlocks.map((block) => (
-                <div
-                  key={block.id}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                >
-                  <div className="flex items-center space-x-3">
-                    <div className={`w-2 h-8 rounded ${
-                      block.type === 'deep-work' ? 'bg-purple-500' :
-                      block.type === 'meeting' ? 'bg-green-500' :
-                      block.type === 'planning' ? 'bg-yellow-500' :
-                      'bg-blue-500'
-                    }`} />
-                    <div>
-                      <p className="font-medium">{block.description || block.type}</p>
-                      <p className="text-sm text-gray-600">
-                        {formatDuration(block.duration || 0)}
-                      </p>
+              {todayBlocks.map((block) => {
+                const workPhase = getWorkPhaseByValue(block.type);
+                const contentType = getContentTypeByValue(block.contentType);
+                return (
+                  <div
+                    key={block.id}
+                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div className={`w-2 h-8 rounded bg-${workPhase.color}-500`} />
+                      <div>
+                        <p className="font-medium">
+                          {block.description || `${workPhase.label} - ${contentType.label}`}
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          {contentType.icon} {contentType.label} • {formatDuration(block.duration || 0)}
+                        </p>
+                      </div>
                     </div>
+                    {block.status === 'completed' ? (
+                      <CheckCircle className="w-5 h-5 text-green-500" />
+                    ) : (
+                      <AlertCircle className="w-5 h-5 text-yellow-500" />
+                    )}
                   </div>
-                  {block.status === 'completed' ? (
-                    <CheckCircle className="w-5 h-5 text-green-500" />
-                  ) : (
-                    <AlertCircle className="w-5 h-5 text-yellow-500" />
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <p className="text-gray-500">No time blocks recorded yet today.</p>

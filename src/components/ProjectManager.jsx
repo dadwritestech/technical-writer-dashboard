@@ -7,10 +7,13 @@ import {
   CheckCircle,
   Clock,
   AlertCircle,
-  Folder
+  Folder,
+  FileText,
+  AlertTriangle
 } from 'lucide-react';
 import { db, saveProject, updateProject } from '../utils/storage';
 import { formatDate } from '../utils/dateHelpers';
+import { contentTypes, documentVersions, maintenanceStatus, getContentTypeByValue, getVersionByValue, getMaintenanceStatusByValue, calculateMaintenanceStatus } from '../utils/contentTypes';
 import toast from 'react-hot-toast';
 
 const ProjectManager = () => {
@@ -22,7 +25,10 @@ const ProjectManager = () => {
     description: '',
     status: 'planning',
     priority: 'medium',
-    dueDate: ''
+    dueDate: '',
+    contentType: 'user-guides',
+    version: 'draft-1',
+    lastUpdated: new Date().toISOString().split('T')[0]
   });
 
   // Get all projects
@@ -49,11 +55,16 @@ const ProjectManager = () => {
     e.preventDefault();
     
     try {
+      const projectData = {
+        ...formData,
+        maintenanceStatus: calculateMaintenanceStatus(formData.lastUpdated)
+      };
+      
       if (editingProject) {
-        await updateProject(editingProject.id, formData);
+        await updateProject(editingProject.id, projectData);
         toast.success('Project updated successfully');
       } else {
-        await saveProject(formData);
+        await saveProject(projectData);
         toast.success('Project created successfully');
       }
       
@@ -63,7 +74,10 @@ const ProjectManager = () => {
         description: '',
         status: 'planning',
         priority: 'medium',
-        dueDate: ''
+        dueDate: '',
+        contentType: 'user-guides',
+        version: 'draft-1',
+        lastUpdated: new Date().toISOString().split('T')[0]
       });
       setShowAddForm(false);
       setEditingProject(null);
@@ -80,7 +94,10 @@ const ProjectManager = () => {
       description: project.description || '',
       status: project.status,
       priority: project.priority || 'medium',
-      dueDate: project.dueDate || ''
+      dueDate: project.dueDate || '',
+      contentType: project.contentType || 'user-guides',
+      version: project.version || 'draft-1',
+      lastUpdated: project.lastUpdated || new Date().toISOString().split('T')[0]
     });
     setShowAddForm(true);
   };
@@ -147,6 +164,23 @@ const ProjectManager = () => {
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Content Type
+                </label>
+                <select
+                  value={formData.contentType}
+                  onChange={(e) => setFormData({ ...formData, contentType: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                >
+                  {contentTypes.map((type) => (
+                    <option key={type.value} value={type.value}>
+                      {type.icon} {type.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
                   Team
                 </label>
                 <select
@@ -158,6 +192,23 @@ const ProjectManager = () => {
                   <option value="">Select team...</option>
                   {teams.map((team) => (
                     <option key={team} value={team}>{team}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Document Version
+                </label>
+                <select
+                  value={formData.version}
+                  onChange={(e) => setFormData({ ...formData, version: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                >
+                  {documentVersions.map((version) => (
+                    <option key={version.value} value={version.value}>
+                      {version.label}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -208,6 +259,18 @@ const ProjectManager = () => {
                 />
               </div>
 
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Last Updated
+                </label>
+                <input
+                  type="date"
+                  value={formData.lastUpdated}
+                  onChange={(e) => setFormData({ ...formData, lastUpdated: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                />
+              </div>
+
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Description
@@ -233,7 +296,10 @@ const ProjectManager = () => {
                     description: '',
                     status: 'planning',
                     priority: 'medium',
-                    dueDate: ''
+                    dueDate: '',
+                    contentType: 'user-guides',
+                    version: 'draft-1',
+                    lastUpdated: new Date().toISOString().split('T')[0]
                   });
                 }}
                 className="btn-secondary"
@@ -254,13 +320,22 @@ const ProjectManager = () => {
           const StatusIcon = getStatusIcon(project.status);
           const statusColor = getStatusColor(project.status);
           const priorityColor = getPriorityColor(project.priority);
+          const contentType = getContentTypeByValue(project.contentType);
+          const version = getVersionByValue(project.version);
+          const maintenance = getMaintenanceStatusByValue(
+            project.maintenanceStatus || calculateMaintenanceStatus(project.lastUpdated)
+          );
           
           return (
             <div key={project.id} className="card">
               <div className="flex justify-between items-start mb-4">
                 <div className="flex-1">
-                  <h4 className="text-lg font-semibold">{project.name}</h4>
-                  <p className="text-sm text-gray-600">{project.team}</p>
+                  <div className="flex items-center space-x-2 mb-1">
+                    <h4 className="text-lg font-semibold">{project.name}</h4>
+                    <span className="text-lg">{contentType.icon}</span>
+                  </div>
+                  <p className="text-sm text-gray-600">{project.team} • {contentType.label}</p>
+                  <p className="text-xs text-gray-500">{version.label}</p>
                 </div>
                 <div className="flex space-x-2">
                   <button
@@ -282,22 +357,43 @@ const ProjectManager = () => {
                 <p className="text-gray-600 text-sm mb-4">{project.description}</p>
               )}
 
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <span className={`flex items-center space-x-1 text-sm px-2 py-1 bg-${statusColor}-100 text-${statusColor}-700 rounded`}>
-                    <StatusIcon className="w-4 h-4" />
-                    <span>{statuses.find(s => s.value === project.status)?.label}</span>
-                  </span>
-                  
-                  <span className={`text-sm px-2 py-1 bg-${priorityColor}-100 text-${priorityColor}-700 rounded`}>
-                    {priorities.find(p => p.value === project.priority)?.label}
+              {/* Maintenance Status Alert */}
+              {(maintenance.value === 'outdated' || maintenance.value === 'critical') && (
+                <div className={`flex items-center space-x-2 p-2 mb-3 rounded-lg bg-${maintenance.color}-50 border border-${maintenance.color}-200`}>
+                  <AlertTriangle className={`w-4 h-4 text-${maintenance.color}-600`} />
+                  <span className={`text-sm text-${maintenance.color}-700`}>
+                    Documentation Debt: {maintenance.label}
                   </span>
                 </div>
+              )}
 
-                {project.dueDate && (
-                  <p className="text-sm text-gray-600">
-                    Due: {formatDate(project.dueDate)}
-                  </p>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <span className={`flex items-center space-x-1 text-sm px-2 py-1 bg-${statusColor}-100 text-${statusColor}-700 rounded`}>
+                      <StatusIcon className="w-4 h-4" />
+                      <span>{statuses.find(s => s.value === project.status)?.label}</span>
+                    </span>
+                    
+                    <span className={`text-sm px-2 py-1 bg-${priorityColor}-100 text-${priorityColor}-700 rounded`}>
+                      {priorities.find(p => p.value === project.priority)?.label}
+                    </span>
+                  </div>
+
+                  {project.dueDate && (
+                    <p className="text-sm text-gray-600">
+                      Due: {formatDate(project.dueDate)}
+                    </p>
+                  )}
+                </div>
+
+                {project.lastUpdated && (
+                  <div className="flex items-center justify-between text-xs text-gray-500">
+                    <span>Last updated: {formatDate(project.lastUpdated)}</span>
+                    <span className={`px-2 py-1 rounded bg-${maintenance.color}-100 text-${maintenance.color}-700`}>
+                      {maintenance.label}
+                    </span>
+                  </div>
                 )}
               </div>
             </div>

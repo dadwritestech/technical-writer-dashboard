@@ -8,11 +8,17 @@ import {
   Coffee,
   Monitor,
   Users,
-  Calendar
+  Calendar,
+  Search,
+  Edit,
+  FileText,
+  Upload,
+  Tool
 } from 'lucide-react';
 import { db } from '../utils/storage';
 import { formatDuration, formatTime } from '../utils/dateHelpers';
 import { useTimeTracking } from '../hooks/useTimeTracking';
+import { contentTypes, workPhases, getContentTypeByValue, getWorkPhaseByValue } from '../utils/contentTypes';
 import toast from 'react-hot-toast';
 
 const TimeTracker = () => {
@@ -26,7 +32,8 @@ const TimeTracker = () => {
     resumeTimeBlock
   } = useTimeTracking();
 
-  const [selectedType, setSelectedType] = useState('deep-work');
+  const [selectedType, setSelectedType] = useState('writing');
+  const [selectedContentType, setSelectedContentType] = useState('user-guides');
   const [selectedProject, setSelectedProject] = useState('');
   const [description, setDescription] = useState('');
 
@@ -50,20 +57,24 @@ const TimeTracker = () => {
       .toArray();
   }, []);
 
-  const timeBlockTypes = [
-    { value: 'deep-work', label: 'Deep Work', icon: Monitor, color: 'purple' },
-    { value: 'shallow-work', label: 'Shallow Work', icon: Clock, color: 'blue' },
-    { value: 'meeting', label: 'Meeting', icon: Users, color: 'green' },
-    { value: 'planning', label: 'Planning', icon: Calendar, color: 'yellow' },
-    { value: 'break', label: 'Break', icon: Coffee, color: 'gray' }
-  ];
+  const timeBlockTypes = workPhases.map(phase => ({
+    value: phase.value,
+    label: phase.label,
+    icon: phase.value === 'research' ? Search :
+          phase.value === 'writing' ? Edit :
+          phase.value === 'review-editing' ? FileText :
+          phase.value === 'version-updates' ? Upload :
+          phase.value === 'publishing' ? Monitor :
+          Tool,
+    color: phase.color
+  }));
 
   const handleStart = () => {
     if (!selectedProject) {
       toast.error('Please select a project');
       return;
     }
-    startTimeBlock(selectedType, selectedProject, description);
+    startTimeBlock(selectedType, selectedProject, description, selectedContentType);
     setDescription('');
   };
 
@@ -115,50 +126,75 @@ const TimeTracker = () => {
           </div>
         ) : (
           <div className="space-y-4">
-            {/* Time Block Type Selection */}
-            <div className="grid grid-cols-5 gap-2">
-              {timeBlockTypes.map((type) => (
-                <button
-                  key={type.value}
-                  onClick={() => setSelectedType(type.value)}
-                  className={`p-3 rounded-lg border-2 transition-all ${
-                    selectedType === type.value
-                      ? `border-${type.color}-500 bg-${type.color}-50`
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <type.icon className={`w-6 h-6 mx-auto mb-1 ${
-                    selectedType === type.value
-                      ? `text-${type.color}-600`
-                      : 'text-gray-600'
-                  }`} />
-                  <span className="text-xs">{type.label}</span>
-                </button>
-              ))}
+            {/* Work Phase Selection */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Work Phase</label>
+              <div className="grid grid-cols-3 gap-2">
+                {timeBlockTypes.map((type) => (
+                  <button
+                    key={type.value}
+                    onClick={() => setSelectedType(type.value)}
+                    className={`p-3 rounded-lg border-2 transition-all ${
+                      selectedType === type.value
+                        ? `border-${type.color}-500 bg-${type.color}-50`
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <type.icon className={`w-5 h-5 mx-auto mb-1 ${
+                      selectedType === type.value
+                        ? `text-${type.color}-600`
+                        : 'text-gray-600'
+                    }`} />
+                    <span className="text-xs text-center">{type.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Content Type Selection */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Content Type</label>
+              <select
+                value={selectedContentType}
+                onChange={(e) => setSelectedContentType(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              >
+                {contentTypes.map((type) => (
+                  <option key={type.value} value={type.value}>
+                    {type.icon} {type.label}
+                  </option>
+                ))}
+              </select>
             </div>
 
             {/* Project Selection */}
-            <select
-              value={selectedProject}
-              onChange={(e) => setSelectedProject(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-            >
-              <option value="">Select a project...</option>
-              {activeProjects?.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.name} ({project.team})
-                </option>
-              ))}
-            </select>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Project</label>
+              <select
+                value={selectedProject}
+                onChange={(e) => setSelectedProject(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              >
+                <option value="">Select a project...</option>
+                {activeProjects?.map((project) => (
+                  <option key={project.id} value={project.id}>
+                    {project.name} ({project.team})
+                  </option>
+                ))}
+              </select>
+            </div>
 
             {/* Description */}
-            <input
-              type="text"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="What are you working on?"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-            />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+              <input
+                type="text"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="What specific task are you working on?"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              />
+            </div>
 
             {/* Start Button */}
             <button
@@ -178,22 +214,29 @@ const TimeTracker = () => {
         {todayBlocks && todayBlocks.length > 0 ? (
           <div className="space-y-3">
             {todayBlocks.map((block) => {
-              const type = timeBlockTypes.find(t => t.value === block.type);
+              const workPhase = getWorkPhaseByValue(block.type);
+              const contentType = getContentTypeByValue(block.contentType);
+              const typeIcon = workPhase.value === 'research' ? Search :
+                              workPhase.value === 'writing' ? Edit :
+                              workPhase.value === 'review-editing' ? FileText :
+                              workPhase.value === 'version-updates' ? Upload :
+                              workPhase.value === 'publishing' ? Monitor :
+                              Tool;
               return (
                 <div
                   key={block.id}
                   className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
                 >
                   <div className="flex items-center space-x-3">
-                    <div className={`p-2 bg-${type?.color || 'gray'}-100 rounded-lg`}>
-                      {type ? <type.icon className={`w-5 h-5 text-${type.color}-600`} /> : null}
+                    <div className={`p-2 bg-${workPhase.color}-100 rounded-lg`}>
+                      {React.createElement(typeIcon, { className: `w-5 h-5 text-${workPhase.color}-600` })}
                     </div>
                     <div>
                       <p className="font-medium">
-                        {block.description || block.type}
+                        {block.description || `${workPhase.label} - ${contentType.label}`}
                       </p>
                       <p className="text-sm text-gray-600">
-                        {formatTime(block.startTime)} - {
+                        {contentType.icon} {contentType.label} • {formatTime(block.startTime)} - {
                           block.endTime ? formatTime(block.endTime) : 'In progress'
                         }
                       </p>
@@ -204,7 +247,7 @@ const TimeTracker = () => {
                       {formatDuration(block.duration || 0)}
                     </p>
                     <p className="text-sm text-gray-600">
-                      {block.projectName || 'No project'}
+                      {workPhase.label}
                     </p>
                   </div>
                 </div>

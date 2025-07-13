@@ -3,9 +3,9 @@ import Dexie from 'dexie';
 // Initialize database
 export const db = new Dexie('TechWriterDB');
 
-db.version(1).stores({
-  timeBlocks: '++id, date, type, startTime, endTime, projectId',
-  projects: '++id, name, team, status, createdAt',
+db.version(2).stores({
+  timeBlocks: '++id, date, type, contentType, workPhase, startTime, endTime, projectId',
+  projects: '++id, name, team, status, contentType, version, lastUpdated, maintenanceStatus, createdAt',
   weeklySummaries: '++id, weekStart, weekEnd, createdAt',
   preferences: 'key, value'
 });

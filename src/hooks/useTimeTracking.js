@@ -21,11 +21,12 @@ export const useTimeTracking = () => {
     return () => clearInterval(interval);
   }, [isActive, currentBlock]);
 
-  const startTimeBlock = useCallback((type, projectId, description) => {
+  const startTimeBlock = useCallback((type, projectId, description, contentType) => {
     const newBlock = {
       type,
       projectId,
       description,
+      contentType,
       date: new Date().toISOString(),
       startTime: new Date().toISOString(),
       status: 'active'
