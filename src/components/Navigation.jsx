@@ -12,7 +12,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { exportData } from '../utils/exportImport';
-import { useTheme } from '../contexts/ThemeContext';
+import { useTheme } from '../contexts/ThemeContext.jsx';
 
 const Navigation = () => {
   const { isDark, toggleTheme } = useTheme();
