@@ -173,6 +173,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Dexie.js** for the excellent IndexedDB wrapper
 - **Lucide** for the beautiful icons
 - **Vite** for the lightning-fast build tool
+- **Claude Code** for bringing my dream to reality
 
 ## 🐛 Issues & Support
 
