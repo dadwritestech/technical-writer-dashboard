@@ -7,7 +7,7 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false, // Reduce build size
-    minify: 'terser',
+    minify: 'esbuild', // Use default esbuild minifier (faster and included)
     rollupOptions: {
       output: {
         manualChunks: {
@@ -17,12 +17,6 @@ export default defineConfig({
           data: ['dexie', 'dexie-react-hooks'],
           utils: ['date-fns', 'file-saver', 'uuid']
         }
-      }
-    },
-    terserOptions: {
-      compress: {
-        drop_console: true, // Remove console.log in production
-        drop_debugger: true
       }
     }
   },
