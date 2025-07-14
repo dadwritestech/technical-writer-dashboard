@@ -214,12 +214,7 @@ Generated on ${formatDate(new Date())}`;
       </div>
 
       {/* Weekly Stats */}
-      {weeklyBlocks === undefined ? (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <SkeletonList count={4} />
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="card">
             <div className="flex items-center justify-between">
               <div>
@@ -277,7 +272,6 @@ Generated on ${formatDate(new Date())}`;
             </div>
           </div>
         </div>
-      )}
 
       {/* Project Breakdown */}
       <div className="card">
@@ -290,9 +284,7 @@ Generated on ${formatDate(new Date())}`;
           )}
         </div>
         
-        {weeklyBlocks === undefined ? (
-          <SkeletonList count={3} />
-        ) : projectBreakdown.length > 0 ? (
+        {projectBreakdown.length > 0 ? (
           <div className="space-y-3">
             {projectBreakdown.map((project, index) => (
               <div key={project.projectId || index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-dark-700 rounded-lg">

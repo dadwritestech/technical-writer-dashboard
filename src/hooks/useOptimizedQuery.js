@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useMemo } from 'react';
 import { db } from '../utils/storage';
 import { PERFORMANCE_LIMITS } from '../utils/constants';
+import { calculateMaintenanceStatus } from '../utils/contentTypes';
 
 export const useOptimizedDashboardData = () => {
   // Optimized today's time blocks - limit to recent ones
@@ -115,37 +116,36 @@ export const useOptimizedTimeBlocks = (dateRange, limit = PERFORMANCE_LIMITS.tim
 };
 
 export const useOptimizedWeeklyData = (weekRange) => {
-  return useLiveQuery(async () => {
+  const result = useLiveQuery(async () => {
     if (!weekRange) return { timeBlocks: [], projects: [] };
     
-    // Limit time blocks for performance
-    const timeBlocks = await db.timeBlocks
-      .where('date')
-      .between(weekRange.start.toISOString(), weekRange.end.toISOString())
-      .limit(PERFORMANCE_LIMITS.weeklyReport.maxTimeBlocks)
-      .toArray();
-    
-    // Get project IDs from time blocks
-    const projectIds = [...new Set(timeBlocks.map(block => block.projectId).filter(Boolean))];
-    
-    // Get only relevant projects
-    const projects = await db.projects
-      .where('id')
-      .anyOf(projectIds)
-      .toArray();
-    
-    return { timeBlocks, projects };
+    try {
+      // Limit time blocks for performance
+      const timeBlocks = await db.timeBlocks
+        .where('date')
+        .between(weekRange.start.toISOString(), weekRange.end.toISOString())
+        .limit(PERFORMANCE_LIMITS.weeklyReport.maxTimeBlocks)
+        .toArray();
+      
+      // Get project IDs from time blocks
+      const projectIds = [...new Set(timeBlocks.map(block => block.projectId).filter(Boolean))];
+      
+      // Get only relevant projects
+      const projects = projectIds.length > 0 
+        ? await db.projects
+            .where('id')
+            .anyOf(projectIds)
+            .toArray()
+        : [];
+      
+      return { timeBlocks, projects };
+    } catch (error) {
+      console.error('Error fetching weekly data:', error);
+      return { timeBlocks: [], projects: [] };
+    }
   }, [weekRange?.start?.toISOString(), weekRange?.end?.toISOString()]);
+
+  // Return default value while loading
+  return result ?? { timeBlocks: [], projects: [] };
 };
 
-// Helper function (needs to be imported from contentTypes)
-const calculateMaintenanceStatus = (lastUpdated) => {
-  if (!lastUpdated) return 'critical';
-  
-  const daysSinceUpdate = Math.floor((new Date() - new Date(lastUpdated)) / (1000 * 60 * 60 * 24));
-  
-  if (daysSinceUpdate <= 90) return 'current';
-  if (daysSinceUpdate <= 180) return 'stale';
-  if (daysSinceUpdate <= 365) return 'outdated';
-  return 'critical';
-};
