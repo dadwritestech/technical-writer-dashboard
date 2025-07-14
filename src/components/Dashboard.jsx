@@ -20,11 +20,12 @@ import { formatDuration, formatDate } from '../utils/dateHelpers';
 import { useTimeTracking } from '../hooks/useTimeTracking';
 import { getContentTypeByValue, getWorkPhaseByValue, calculateMaintenanceStatus } from '../utils/contentTypes';
 import { useOptimizedDashboardData } from '../hooks/useOptimizedQuery';
+import { useTimer } from '../contexts/TimerContext';
 import LoadingSpinner from './LoadingSpinner';
 import { SkeletonList } from './SkeletonCard';
 
 const Dashboard = () => {
-  const { currentBlock, elapsedTime, isActive } = useTimeTracking();
+  const { activeTimers, getFormattedElapsedTime } = useTimer();
   const [todayStats, setTodayStats] = useState({
     totalMinutes: 0,
     researchMinutes: 0,
@@ -70,10 +71,12 @@ const Dashboard = () => {
           <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Dashboard</h2>
           <p className="text-gray-600 dark:text-gray-400">{formatDate(new Date())}</p>
         </div>
-        {isActive && currentBlock && (
-          <div className="flex items-center space-x-2 bg-green-50 text-green-700 px-4 py-2 rounded-lg">
+        {activeTimers && activeTimers.length > 0 && (
+          <div className="flex items-center space-x-2 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 px-4 py-2 rounded-lg">
             <Clock className="w-5 h-5 animate-pulse" />
-            <span>Active: {formatDuration(Math.floor(elapsedTime / 60))}</span>
+            <span>
+              {activeTimers.length} Active Timer{activeTimers.length > 1 ? 's' : ''}: {getFormattedElapsedTime(activeTimers[0].startTime)}
+            </span>
           </div>
         )}
       </div>

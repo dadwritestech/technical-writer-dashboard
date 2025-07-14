@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { db } from '../utils/storage';
 import { formatDuration, formatTime } from '../utils/dateHelpers';
-import { useTimeTracking } from '../hooks/useTimeTracking';
+import { useTimer } from '../contexts/TimerContext';
 import { contentTypes, workPhases, getContentTypeByValue, getWorkPhaseByValue } from '../utils/contentTypes';
 import { useOptimizedTimeBlocks } from '../hooks/useOptimizedQuery';
 import { usePagination } from '../hooks/usePagination';
@@ -69,15 +69,7 @@ const TimeBlockItem = React.memo(({ block }) => {
 });
 
 const TimeTracker = () => {
-  const {
-    currentBlock,
-    elapsedTime,
-    isActive,
-    startTimeBlock,
-    endTimeBlock,
-    pauseTimeBlock,
-    resumeTimeBlock
-  } = useTimeTracking();
+  const { activeTimers, startTimer, stopTimer, pauseTimer, resumeTimer, getFormattedElapsedTime } = useTimer();
 
   const [selectedType, setSelectedType] = useState('writing');
   const [selectedContentType, setSelectedContentType] = useState('user-guides');
@@ -144,33 +136,23 @@ const TimeTracker = () => {
     color: phase.color
   }));
 
-  const validateTimeTracker = () => {
-    const errors = [];
-    
+  const handleStart = async () => {
     if (!selectedProject) {
-      errors.push('Please select a project');
-    }
-    
-    if (!description.trim()) {
-      errors.push('Please provide a task description');
-    }
-    
-    return errors;
-  };
-
-  const handleStart = () => {
-    const validationErrors = validateTimeTracker();
-    if (validationErrors.length > 0) {
-      validationErrors.forEach(error => toast.error(error));
+      toast.error('Please select a project');
       return;
     }
     
-    startTimeBlock(selectedType, selectedProject, description, selectedContentType);
-    setDescription('');
-  };
-
-  const handleStop = () => {
-    endTimeBlock();
+    if (!description.trim()) {
+      toast.error('Please provide a task description');
+      return;
+    }
+    
+    try {
+      await startTimer(selectedType, selectedProject, description, selectedContentType);
+      setDescription('');
+    } catch (error) {
+      console.error('Failed to start timer:', error);
+    }
   };
 
   return (
@@ -179,19 +161,18 @@ const TimeTracker = () => {
 
       {/* Timer Display */}
       <div className="card text-center">
-        <div className="text-6xl font-mono font-bold text-gray-900 dark:text-gray-100 mb-4">
-          {formatDuration(Math.floor(elapsedTime / 60))}
-        </div>
-        
-        {currentBlock ? (
+        {activeTimers && activeTimers.length > 0 ? (
           <div className="space-y-4">
+            <div className="text-6xl font-mono font-bold text-gray-900 dark:text-gray-100 mb-4">
+              {getFormattedElapsedTime(activeTimers[0].startTime)}
+            </div>
             <p className="text-lg text-gray-600 dark:text-gray-400">
-              {currentBlock.description || currentBlock.type}
+              {activeTimers[0].description || `${activeTimers[0].type} - ${activeTimers[0].contentType}`}
             </p>
             <div className="flex justify-center space-x-4">
-              {isActive ? (
+              {activeTimers[0].status === 'active' ? (
                 <button
-                  onClick={pauseTimeBlock}
+                  onClick={() => pauseTimer(activeTimers[0].id)}
                   className="btn-secondary flex items-center space-x-2"
                 >
                   <Pause className="w-5 h-5" />
@@ -199,7 +180,7 @@ const TimeTracker = () => {
                 </button>
               ) : (
                 <button
-                  onClick={resumeTimeBlock}
+                  onClick={() => resumeTimer(activeTimers[0].id)}
                   className="btn-primary flex items-center space-x-2"
                 >
                   <Play className="w-5 h-5" />
@@ -207,7 +188,7 @@ const TimeTracker = () => {
                 </button>
               )}
               <button
-                onClick={handleStop}
+                onClick={() => stopTimer(activeTimers[0].id)}
                 className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors duration-200 font-medium flex items-center space-x-2"
               >
                 <Square className="w-5 h-5" />
@@ -217,6 +198,9 @@ const TimeTracker = () => {
           </div>
         ) : (
           <div className="space-y-4">
+            <div className="text-6xl font-mono font-bold text-gray-900 dark:text-gray-100 mb-4">
+              0:00
+            </div>
             {/* Work Phase Selection */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Work Phase</label>

@@ -2,9 +2,11 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { ThemeProvider } from './contexts/ThemeContext.jsx';
+import { TimerProvider } from './contexts/TimerContext.jsx';
 import ErrorBoundary from './components/ErrorBoundary';
 import Navigation from './components/Navigation';
 import MobileNavigation from './components/MobileNavigation';
+import ActiveTimerDisplay from './components/ActiveTimerDisplay';
 import Dashboard from './components/Dashboard';
 import TimeTracker from './components/TimeTracker';
 import ProjectManager from './components/ProjectManager';
@@ -15,8 +17,9 @@ function App() {
   return (
     <ErrorBoundary fallbackMessage="The Technical Writer Dashboard encountered an error. Please try refreshing the page.">
       <ThemeProvider>
-        <Router basename="/technical-writer-dashboard/">
-          <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 dark:from-dark-900 dark:via-dark-800 dark:to-indigo-950 transition-all duration-500">
+        <TimerProvider>
+          <Router basename="/technical-writer-dashboard/">
+            <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 dark:from-dark-900 dark:via-dark-800 dark:to-indigo-950 transition-all duration-500">
             <ErrorBoundary fallbackMessage="Navigation component failed to load.">
               <Navigation />
             </ErrorBoundary>
@@ -52,6 +55,9 @@ function App() {
             <ErrorBoundary fallbackMessage="Mobile navigation failed to load.">
               <MobileNavigation />
             </ErrorBoundary>
+            <ErrorBoundary fallbackMessage="Active timer display failed to load.">
+              <ActiveTimerDisplay />
+            </ErrorBoundary>
             <Toaster 
               position="top-right"
               toastOptions={{
@@ -62,8 +68,9 @@ function App() {
                 }
               }}
             />
-          </div>
-        </Router>
+            </div>
+          </Router>
+        </TimerProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );
