@@ -3,18 +3,36 @@ import Dexie from 'dexie';
 // Initialize database
 export const db = new Dexie('TechWriterDB');
 
-db.version(3).stores({
-  timeBlocks: '++id, date, type, contentType, workPhase, startTime, endTime, projectId',
+db.version(4).stores({
+  timeBlocks: '++id, date, type, contentType, workPhase, startTime, endTime, projectId, projectName, projectTeam',
   projects: '++id, name, team, status, contentType, version, lastUpdated, maintenanceStatus, createdAt',
   weeklySummaries: '++id, weekStart, weekEnd, createdAt',
   preferences: 'key, value',
-  activeTimers: '++id, startTime, type, projectId, description, contentType, status'
+  activeTimers: '++id, startTime, type, projectId, projectName, projectTeam, description, contentType, status'
 });
 
-// Helper functions
+// Enhanced time block saving with project details
 export const saveTimeBlock = async (timeBlock) => {
+  // Get project details when saving time block
+  let projectName = 'Unknown Project';
+  let projectTeam = '';
+  
+  if (timeBlock.projectId) {
+    try {
+      const project = await db.projects.get(parseInt(timeBlock.projectId));
+      if (project) {
+        projectName = project.name;
+        projectTeam = project.team;
+      }
+    } catch (error) {
+      console.error('Error fetching project details:', error);
+    }
+  }
+  
   return await db.timeBlocks.add({
     ...timeBlock,
+    projectName, // Cache project name
+    projectTeam, // Cache project team
     createdAt: new Date().toISOString()
   });
 };
@@ -62,10 +80,28 @@ export const getPreference = async (key, defaultValue = null) => {
   return pref ? pref.value : defaultValue;
 };
 
-// Active timer management
+// Enhanced active timer saving
 export const saveActiveTimer = async (timer) => {
+  // Get project details when saving active timer
+  let projectName = 'Unknown Project';
+  let projectTeam = '';
+  
+  if (timer.projectId) {
+    try {
+      const project = await db.projects.get(parseInt(timer.projectId));
+      if (project) {
+        projectName = project.name;
+        projectTeam = project.team;
+      }
+    } catch (error) {
+      console.error('Error fetching project details:', error);
+    }
+  }
+  
   return await db.activeTimers.add({
     ...timer,
+    projectName, // Cache project name
+    projectTeam, // Cache project team  
     createdAt: new Date().toISOString()
   });
 };
@@ -88,10 +124,12 @@ export const stopActiveTimer = async (timerId) => {
     const endTime = new Date().toISOString();
     const duration = Math.floor((new Date(endTime) - new Date(timer.startTime)) / 1000 / 60);
     
-    // Save as completed time block
+    // Save as completed time block with cached project info
     await saveTimeBlock({
       type: timer.type,
       projectId: timer.projectId,
+      projectName: timer.projectName, // Use cached name
+      projectTeam: timer.projectTeam,   // Use cached team
       description: timer.description,
       contentType: timer.contentType,
       date: timer.startTime,
@@ -105,5 +143,32 @@ export const stopActiveTimer = async (timerId) => {
     await db.activeTimers.delete(timerId);
     
     return { duration, endTime };
+  }
+};
+
+// Migration function to update existing time blocks
+export const migrateTimeBlocks = async () => {
+  try {
+    const timeBlocks = await db.timeBlocks.toArray();
+    const projects = await db.projects.toArray();
+    
+    console.log(`Migrating ${timeBlocks.length} time blocks...`);
+    
+    for (const block of timeBlocks) {
+      if (block.projectId && !block.projectName) {
+        const project = projects.find(p => p.id === parseInt(block.projectId));
+        if (project) {
+          await db.timeBlocks.update(block.id, {
+            projectName: project.name,
+            projectTeam: project.team
+          });
+          console.log(`Updated time block ${block.id} with project name: ${project.name}`);
+        }
+      }
+    }
+    
+    console.log('Migration completed successfully');
+  } catch (error) {
+    console.error('Migration failed:', error);
   }
 };

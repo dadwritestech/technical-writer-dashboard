@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { ThemeProvider } from './contexts/ThemeContext.jsx';
 import { TimerProvider } from './contexts/TimerContext.jsx';
+import { migrateTimeBlocks } from './utils/storage';
 import ErrorBoundary from './components/ErrorBoundary';
 import Navigation from './components/Navigation';
 import MobileNavigation from './components/MobileNavigation';
@@ -14,6 +15,20 @@ import WeeklySummary from './components/WeeklySummary';
 import Settings from './components/Settings';
 
 function App() {
+  // Run migration on app startup
+  useEffect(() => {
+    const runMigration = async () => {
+      try {
+        await migrateTimeBlocks();
+      } catch (error) {
+        console.error('Migration failed:', error);
+      }
+    };
+    
+    // Run migration after a short delay to ensure database is ready
+    setTimeout(runMigration, 1000);
+  }, []);
+
   return (
     <ErrorBoundary fallbackMessage="The Technical Writer Dashboard encountered an error. Please try refreshing the page.">
       <ThemeProvider>

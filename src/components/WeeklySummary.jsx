@@ -14,9 +14,11 @@ import {
 import { db } from '../utils/storage';
 import { formatDuration, getWeekRange, formatDate } from '../utils/dateHelpers';
 import { useOptimizedWeeklyData } from '../hooks/useOptimizedQuery';
+import { mapWorkPhaseToTimeCategory, getTimeCategoryLabel } from '../utils/workPhaseMapping';
 import { PERFORMANCE_LIMITS } from '../utils/constants';
 import { SkeletonList } from './SkeletonCard';
 import LoadingSpinner from './LoadingSpinner';
+import DebugPanel from './DebugPanel';
 import toast from 'react-hot-toast';
 
 const WeeklySummary = () => {
@@ -25,88 +27,65 @@ const WeeklySummary = () => {
   const [inProgressItems, setInProgressItems] = useState(['']);
   const [emailSummary, setEmailSummary] = useState('');
 
-  // Get optimized weekly data
-  const { timeBlocks: weeklyBlocks, projects } = useOptimizedWeeklyData(weekRange);
+  // Get time blocks for the current week
+  const weeklyBlocks = useLiveQuery(async () => {
+    return await db.timeBlocks
+      .where('date')
+      .between(weekRange.start.toISOString(), weekRange.end.toISOString())
+      .toArray();
+  }, [weekRange]);
 
-  // Calculate weekly stats with performance optimization
+  // Calculate weekly stats with proper work phase mapping
   const weeklyStats = useMemo(() => {
-    if (!weeklyBlocks || weeklyBlocks.length === 0) {
-      return { total: 0, deepWork: 0, meetings: 0, planning: 0, research: 0, writing: 0, review: 0 };
-    }
+    if (!weeklyBlocks) return { total: 0, deepWork: 0, shallowWork: 0, meetings: 0, planning: 0 };
 
-    // Process in chunks for large datasets
-    const chunkSize = 100;
-    let stats = { total: 0, deepWork: 0, meetings: 0, planning: 0, research: 0, writing: 0, review: 0 };
-    
-    for (let i = 0; i < weeklyBlocks.length; i += chunkSize) {
-      const chunk = weeklyBlocks.slice(i, i + chunkSize);
-      
-      const chunkStats = chunk.reduce((acc, block) => {
-        if (block.duration) {
-          acc.total += block.duration;
-          switch (block.type) {
-            case 'research':
-              acc.research += block.duration;
-              break;
-            case 'writing':
-              acc.writing += block.duration;
-              break;
-            case 'review-editing':
-              acc.review += block.duration;
-              break;
-            case 'deep-work':
-              acc.deepWork += block.duration;
-              break;
-            case 'meeting':
-              acc.meetings += block.duration;
-              break;
-            case 'planning':
-              acc.planning += block.duration;
-              break;
-          }
+    return weeklyBlocks.reduce((acc, block) => {
+      if (block.duration) {
+        acc.total += block.duration;
+        
+        // Map work phase to time category
+        const category = mapWorkPhaseToTimeCategory(block.type);
+        switch (category) {
+          case 'deepWork':
+            acc.deepWork += block.duration;
+            break;
+          case 'shallowWork':
+            acc.shallowWork += block.duration;
+            break;
+          case 'meetings':
+            acc.meetings += block.duration;
+            break;
+          case 'planning':
+            acc.planning += block.duration;
+            break;
         }
-        return acc;
-      }, { total: 0, deepWork: 0, meetings: 0, planning: 0, research: 0, writing: 0, review: 0 });
-      
-      // Merge chunk stats
-      Object.keys(chunkStats).forEach(key => {
-        stats[key] += chunkStats[key];
-      });
-    }
-    
-    return stats;
+      }
+      return acc;
+    }, { total: 0, deepWork: 0, shallowWork: 0, meetings: 0, planning: 0 });
   }, [weeklyBlocks]);
 
-  // Project time breakdown with performance optimization
+  // Enhanced project time breakdown using cached project info
   const projectBreakdown = useMemo(() => {
-    if (!weeklyBlocks || !projects || weeklyBlocks.length === 0) return [];
+    if (!weeklyBlocks) return [];
 
-    const breakdown = new Map();
-    
-    // Process time blocks efficiently
+    const breakdown = {};
     weeklyBlocks.forEach(block => {
       if (block.projectId && block.duration) {
-        const current = breakdown.get(block.projectId) || 0;
-        breakdown.set(block.projectId, current + block.duration);
+        const key = `${block.projectId}`;
+        if (!breakdown[key]) {
+          breakdown[key] = {
+            projectId: block.projectId,
+            projectName: block.projectName || 'Unknown Project',
+            projectTeam: block.projectTeam || '',
+            minutes: 0
+          };
+        }
+        breakdown[key].minutes += block.duration;
       }
     });
 
-    // Convert to sorted array, limit to top projects for performance
-    const result = Array.from(breakdown.entries())
-      .map(([projectId, minutes]) => {
-        const project = projects.find(p => p.id === parseInt(projectId));
-        return {
-          projectName: project?.name || 'Unknown Project',
-          team: project?.team || '',
-          minutes,
-          projectId
-        };
-      })
-      .sort((a, b) => b.minutes - a.minutes)
-      .slice(0, PERFORMANCE_LIMITS.weeklyReport.topProjects);
-
-    return result;
-  }, [weeklyBlocks, projects]);
+    return Object.values(breakdown).sort((a, b) => b.minutes - a.minutes);
+  }, [weeklyBlocks]);
 
   const addCompletedItem = () => {
     setCompletedItems([...completedItems, '']);
@@ -145,11 +124,14 @@ const WeeklySummary = () => {
 Time Breakdown:
 • Total Time: ${formatDuration(weeklyStats.total)}
 • Deep Work: ${formatDuration(weeklyStats.deepWork)}
+• Shallow Work: ${formatDuration(weeklyStats.shallowWork)}
 • Meetings: ${formatDuration(weeklyStats.meetings)}
 • Planning: ${formatDuration(weeklyStats.planning)}
 
 Project Time Allocation:
-${projectBreakdown.map(p => `• ${p.projectName} (${p.team}): ${formatDuration(p.minutes)}`).join('\n')}
+${projectBreakdown.map(p => 
+  `• ${p.projectName}${p.projectTeam ? ` (${p.projectTeam})` : ''}: ${formatDuration(p.minutes)}`
+).join('\n')}
 
 Completed This Week:
 ${completed.map(item => `• ${item}`).join('\n')}
@@ -230,12 +212,12 @@ Generated on ${formatDate(new Date())}`;
           <div className="card">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Research & Writing</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Deep Work</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                  {formatDuration(weeklyStats.research + weeklyStats.writing)}
+                  {formatDuration(weeklyStats.deepWork)}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-500">
-                  {weeklyStats.total > 0 && Math.round(((weeklyStats.research + weeklyStats.writing) / weeklyStats.total) * 100)}%
+                  {weeklyStats.total > 0 && Math.round((weeklyStats.deepWork / weeklyStats.total) * 100)}%
                 </p>
               </div>
               <Target className="w-8 h-8 text-purple-500" />
@@ -245,12 +227,27 @@ Generated on ${formatDate(new Date())}`;
           <div className="card">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Review & Editing</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Shallow Work</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                  {formatDuration(weeklyStats.review)}
+                  {formatDuration(weeklyStats.shallowWork)}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-500">
-                  {weeklyStats.total > 0 && Math.round((weeklyStats.review / weeklyStats.total) * 100)}%
+                  {weeklyStats.total > 0 && Math.round((weeklyStats.shallowWork / weeklyStats.total) * 100)}%
+                </p>
+              </div>
+              <TrendingUp className="w-8 h-8 text-blue-500" />
+            </div>
+          </div>
+
+          <div className="card">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Meetings</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                  {formatDuration(weeklyStats.meetings)}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-500">
+                  {weeklyStats.total > 0 && Math.round((weeklyStats.meetings / weeklyStats.total) * 100)}%
                 </p>
               </div>
               <CheckCircle className="w-8 h-8 text-green-500" />
@@ -260,15 +257,15 @@ Generated on ${formatDate(new Date())}`;
           <div className="card">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Meetings & Planning</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Planning</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                  {formatDuration(weeklyStats.meetings + weeklyStats.planning)}
+                  {formatDuration(weeklyStats.planning)}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-500">
-                  {weeklyStats.total > 0 && Math.round(((weeklyStats.meetings + weeklyStats.planning) / weeklyStats.total) * 100)}%
+                  {weeklyStats.total > 0 && Math.round((weeklyStats.planning / weeklyStats.total) * 100)}%
                 </p>
               </div>
-              <TrendingUp className="w-8 h-8 text-blue-500" />
+              <TrendingUp className="w-8 h-8 text-yellow-500" />
             </div>
           </div>
         </div>
@@ -290,7 +287,9 @@ Generated on ${formatDate(new Date())}`;
               <div key={project.projectId || index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-dark-700 rounded-lg">
                 <div className="flex-1 min-w-0">
                   <p className="font-medium truncate">{project.projectName}</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 truncate">{project.team}</p>
+                  {project.projectTeam && (
+                    <p className="text-sm text-gray-600 dark:text-gray-400 truncate">{project.projectTeam}</p>
+                  )}
                 </div>
                 <div className="text-right ml-4">
                   <p className="font-medium">{formatDuration(project.minutes)}</p>
@@ -410,6 +409,9 @@ Generated on ${formatDate(new Date())}`;
           </pre>
         </div>
       )}
+
+      {/* Temporary Debug Panel */}
+      {import.meta.env.DEV && <DebugPanel />}
     </div>
   );
 };
