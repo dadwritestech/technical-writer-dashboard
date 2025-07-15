@@ -23,6 +23,7 @@ Available sections:
 - 🏠 **Dashboard** - Overview and quick actions
 - ⏰ **Time** - Time tracking interface  
 - 📁 **Projects** - Project management
+- 👥 **Teams** - Team management and analytics
 - 📊 **Weekly** - Summary reports
 - ⚙️ **Settings** - Configuration and data export
 
@@ -67,6 +68,54 @@ View all your time blocks for today, including:
 - Duration and status
 - Task descriptions
 
+## 👥 Team Management
+
+### Creating Teams
+
+1. Go to **Teams** page
+2. Click **New Team** button
+3. Fill out the team form:
+   - **Team Name**: Unique identifier (required)
+   - **Team Lead**: Person responsible for the team
+   - **Description**: Brief overview of team responsibilities
+   - **Status**: Active or Archived
+   - **Team Color**: Visual identifier (8 colors available)
+
+4. Click **Create Team**
+
+### Team Dashboard
+
+The Teams section includes a comprehensive dashboard with:
+
+**Overview Statistics**:
+- Active Teams count
+- Total Projects across all teams
+- Total Time Tracked
+- Recent Activity (last 30 days)
+
+**Top Performing Teams**:
+- Ranked by recent activity
+- Shows time tracked and active projects
+- Visual team identification with colors
+
+### Managing Teams
+
+**Editing Teams**:
+- Click the edit icon on any team card
+- Update team information
+- Change team colors for better organization
+
+**Archiving Teams**:
+- Teams with active projects cannot be archived
+- Archive all projects first, then archive the team
+- Archived teams are hidden from project dropdowns
+
+**Team Analytics**:
+- Real-time project counts
+- Time tracking statistics
+- Activity trends
+- Team performance metrics
+
 ## 📁 Project Management
 
 ### Creating Projects
@@ -77,7 +126,7 @@ View all your time blocks for today, including:
 
    **Basic Information**:
    - Project Name (required)
-   - Team Selection (required)
+   - Team Selection (required) - Select from your organization's teams
    - Description
 
    **Documentation Details**:
@@ -88,6 +137,8 @@ View all your time blocks for today, including:
    - Last Updated
 
 4. Click **Create Project**
+
+**Note**: If no teams are available, you'll need to create teams first using the "Manage Teams" button or navigate to the Teams section.
 
 ### Project Status Tracking
 
@@ -292,6 +343,7 @@ The dashboard adapts to various workflows:
 - **Ctrl/Cmd + D**: Go to Dashboard
 - **Ctrl/Cmd + T**: Open Time Tracker
 - **Ctrl/Cmd + P**: Open Projects
+- **Ctrl/Cmd + M**: Open Teams
 - **Ctrl/Cmd + W**: Open Weekly Summary
 - **Ctrl/Cmd + ,**: Open Settings
 

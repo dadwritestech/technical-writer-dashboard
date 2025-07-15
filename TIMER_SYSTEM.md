@@ -14,11 +14,12 @@ The Global Timer System solves critical issues with browser-based time tracking:
 
 ### **1. Database Schema**
 ```javascript
-// Enhanced database with active timers table
-db.version(3).stores({
-  timeBlocks: '++id, date, type, contentType, workPhase, startTime, endTime, projectId',
+// Enhanced database with active timers table and team integration
+db.version(5).stores({
+  timeBlocks: '++id, date, type, contentType, workPhase, startTime, endTime, projectId, projectName, projectTeam',
   projects: '++id, name, team, status, contentType, version, lastUpdated',
-  activeTimers: '++id, startTime, type, projectId, description, contentType, status'
+  teams: '++id, name, status, color, createdAt, updatedAt',
+  activeTimers: '++id, startTime, type, projectId, projectName, projectTeam, description, contentType, status'
 });
 ```
 
@@ -55,25 +56,42 @@ const getElapsedTime = useCallback((startTime) => {
 ```javascript
 const startTimer = async (type, projectId, description, contentType) => {
   const startTime = new Date().toISOString();
+  
+  // Get project details including team information
+  let projectName = 'Unknown Project';
+  let projectTeam = '';
+  
+  if (projectId) {
+    const project = await db.projects.get(parseInt(projectId));
+    if (project) {
+      projectName = project.name;
+      projectTeam = project.team;
+    }
+  }
+  
   const timerId = await saveActiveTimer({
     type,
     projectId,
+    projectName,
+    projectTeam,
     description,
     contentType,
     startTime,
     status: 'active'
   });
   
-  toast.success(`Started ${type} timer`);
+  toast.success(`Started ${type} timer for ${projectName}`);
   return timerId;
 };
 ```
 
 **Process:**
 1. Create timestamp using `new Date().toISOString()`
-2. Save to `activeTimers` table in IndexedDB
-3. Timer immediately appears in global context
-4. Floating display shows on all pages
+2. Fetch project details including team information
+3. Cache project name and team for performance
+4. Save to `activeTimers` table in IndexedDB
+5. Timer immediately appears in global context
+6. Floating display shows on all pages with team context
 
 ### **2. Timer Updates**
 ```javascript
@@ -112,10 +130,12 @@ const stopTimer = async (timerId) => {
     const endTime = new Date().toISOString();
     const duration = Math.floor((new Date(endTime) - new Date(timer.startTime)) / 1000 / 60);
     
-    // Save as completed time block
+    // Save as completed time block with team information
     await saveTimeBlock({
       type: timer.type,
       projectId: timer.projectId,
+      projectName: timer.projectName,
+      projectTeam: timer.projectTeam,
       description: timer.description,
       contentType: timer.contentType,
       date: timer.startTime,
@@ -145,6 +165,10 @@ const ActiveTimerDisplay = () => {
         <div key={timer.id} className="bg-white rounded-lg shadow-lg border-l-4 p-3">
           <div className="text-lg font-mono font-bold">
             {getFormattedElapsedTime(timer.startTime)}
+          </div>
+          <div className="text-sm text-gray-600">
+            {timer.projectName}
+            {timer.projectTeam && <span className="text-gray-500"> • {timer.projectTeam}</span>}
           </div>
           {/* Controls for pause/resume/stop */}
         </div>
