@@ -3,9 +3,10 @@ import Dexie from 'dexie';
 // Initialize database
 export const db = new Dexie('TechWriterDB');
 
-db.version(4).stores({
+db.version(5).stores({
   timeBlocks: '++id, date, type, contentType, workPhase, startTime, endTime, projectId, projectName, projectTeam',
   projects: '++id, name, team, status, contentType, version, lastUpdated, maintenanceStatus, createdAt',
+  teams: '++id, name, status, color, createdAt, updatedAt',
   weeklySummaries: '++id, weekStart, weekEnd, createdAt',
   preferences: 'key, value',
   activeTimers: '++id, startTime, type, projectId, projectName, projectTeam, description, contentType, status'
@@ -49,7 +50,49 @@ export const getTimeBlocksByDate = async (date) => {
     .toArray();
 };
 
+// Team management functions
+export const saveTeam = async (team) => {
+  return await db.teams.add({
+    ...team,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  });
+};
+
+export const updateTeam = async (id, updates) => {
+  return await db.teams.update(id, {
+    ...updates,
+    updatedAt: new Date().toISOString()
+  });
+};
+
+export const getActiveTeams = async () => {
+  return await db.teams
+    .where('status')
+    .equals('active')
+    .toArray();
+};
+
+export const getAllTeams = async () => {
+  return await db.teams.toArray();
+};
+
+export const getTeamByName = async (name) => {
+  return await db.teams
+    .where('name')
+    .equals(name)
+    .first();
+};
+
 export const saveProject = async (project) => {
+  // Validate team exists if specified
+  if (project.team) {
+    const team = await getTeamByName(project.team);
+    if (!team) {
+      throw new Error(`Team "${project.team}" does not exist`);
+    }
+  }
+  
   return await db.projects.add({
     ...project,
     createdAt: new Date().toISOString(),
@@ -58,6 +101,14 @@ export const saveProject = async (project) => {
 };
 
 export const updateProject = async (id, updates) => {
+  // Validate team exists if being updated
+  if (updates.team) {
+    const team = await getTeamByName(updates.team);
+    if (!team) {
+      throw new Error(`Team "${updates.team}" does not exist`);
+    }
+  }
+  
   return await db.projects.update(id, {
     ...updates,
     updatedAt: new Date().toISOString()
@@ -143,6 +194,69 @@ export const stopActiveTimer = async (timerId) => {
     await db.activeTimers.delete(timerId);
     
     return { duration, endTime };
+  }
+};
+
+// Initialize default teams if none exist
+export const initializeDefaultTeams = async () => {
+  const teamCount = await db.teams.count();
+  
+  if (teamCount === 0) {
+    const defaultTeams = [
+      {
+        name: 'Documentation Team',
+        description: 'Main documentation and content creation team',
+        status: 'active',
+        color: 'blue'
+      },
+      {
+        name: 'API Team',
+        description: 'API documentation and developer resources',
+        status: 'active',
+        color: 'green'
+      },
+      {
+        name: 'Support Team',
+        description: 'User guides and support documentation',
+        status: 'active',
+        color: 'purple'
+      }
+    ];
+    
+    for (const team of defaultTeams) {
+      await saveTeam(team);
+    }
+    
+    console.log('Initialized default teams');
+  }
+};
+
+// Migration function to handle team updates
+export const migrateTeamsData = async () => {
+  try {
+    // Initialize default teams if none exist
+    await initializeDefaultTeams();
+    
+    // Update existing projects with team validation
+    const projects = await db.projects.toArray();
+    const teams = await getAllTeams();
+    const teamNames = teams.map(t => t.name);
+    
+    for (const project of projects) {
+      if (project.team && !teamNames.includes(project.team)) {
+        console.log(`Creating missing team: ${project.team}`);
+        await saveTeam({
+          name: project.team,
+          description: `Auto-created from existing project: ${project.name}`,
+          status: 'active',
+          color: 'gray'
+        });
+      }
+    }
+    
+    console.log('Team migration completed successfully');
+  } catch (error) {
+    console.error('Team migration failed:', error);
   }
 };
 

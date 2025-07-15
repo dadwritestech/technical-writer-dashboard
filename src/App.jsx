@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { ThemeProvider } from './contexts/ThemeContext.jsx';
 import { TimerProvider } from './contexts/TimerContext.jsx';
-import { migrateTimeBlocks } from './utils/storage';
+import { migrateTimeBlocks, migrateTeamsData } from './utils/storage';
 import ErrorBoundary from './components/ErrorBoundary';
 import Navigation from './components/Navigation';
 import MobileNavigation from './components/MobileNavigation';
@@ -11,22 +11,24 @@ import ActiveTimerDisplay from './components/ActiveTimerDisplay';
 import Dashboard from './components/Dashboard';
 import TimeTracker from './components/TimeTracker';
 import ProjectManager from './components/ProjectManager';
+import TeamManager from './components/TeamManager';
 import WeeklySummary from './components/WeeklySummary';
 import Settings from './components/Settings';
 
 function App() {
-  // Run migration on app startup
+  // Run migrations on app startup
   useEffect(() => {
-    const runMigration = async () => {
+    const runMigrations = async () => {
       try {
         await migrateTimeBlocks();
+        await migrateTeamsData(); // Initialize teams and migrate existing data
       } catch (error) {
         console.error('Migration failed:', error);
       }
     };
     
-    // Run migration after a short delay to ensure database is ready
-    setTimeout(runMigration, 1000);
+    // Run migrations after a short delay to ensure database is ready
+    setTimeout(runMigrations, 1000);
   }, []);
 
   return (
@@ -53,6 +55,11 @@ function App() {
                 <Route path="/projects" element={
                   <ErrorBoundary fallbackMessage="Project Manager component failed to load.">
                     <ProjectManager />
+                  </ErrorBoundary>
+                } />
+                <Route path="/teams" element={
+                  <ErrorBoundary fallbackMessage="Team Manager component failed to load.">
+                    <TeamManager />
                   </ErrorBoundary>
                 } />
                 <Route path="/weekly" element={

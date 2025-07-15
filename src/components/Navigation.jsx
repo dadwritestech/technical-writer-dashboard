@@ -4,6 +4,7 @@ import {
   LayoutDashboard, 
   Clock, 
   FolderOpen, 
+  Users,
   FileText, 
   Settings,
   Download,
@@ -21,6 +22,7 @@ const Navigation = () => {
     { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
     { to: '/time', icon: Clock, label: 'Time Tracking' },
     { to: '/projects', icon: FolderOpen, label: 'Projects' },
+    { to: '/teams', icon: Users, label: 'Teams' },
     { to: '/weekly', icon: FileText, label: 'Weekly Summary' },
     { to: '/settings', icon: Settings, label: 'Settings' },
   ];

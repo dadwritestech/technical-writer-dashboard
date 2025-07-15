@@ -9,9 +9,10 @@ import {
   AlertCircle,
   Folder,
   FileText,
-  AlertTriangle
+  AlertTriangle,
+  Users
 } from 'lucide-react';
-import { db, saveProject, updateProject } from '../utils/storage';
+import { db, saveProject, updateProject, getActiveTeams, getAllTeams } from '../utils/storage';
 import { formatDate } from '../utils/dateHelpers';
 import { contentTypes, documentVersions, maintenanceStatus, getContentTypeByValue, getVersionByValue, getMaintenanceStatusByValue, calculateMaintenanceStatus } from '../utils/contentTypes';
 import toast from 'react-hot-toast';
@@ -49,6 +50,18 @@ const ProjectManager = () => {
     []
   );
 
+  // Get active teams for dropdowns
+  const activeTeams = useLiveQuery(
+    () => getActiveTeams(),
+    []
+  );
+
+  // Get all teams for filtering (including archived)
+  const allTeams = useLiveQuery(
+    () => getAllTeams(),
+    []
+  );
+
   // Apply filters and search
   const filteredProjects = useMemo(() => {
     if (!allProjects) return [];
@@ -59,7 +72,7 @@ const ProjectManager = () => {
         const searchLower = searchTerm.toLowerCase();
         const matchesSearch = 
           project.name.toLowerCase().includes(searchLower) ||
-          project.team.toLowerCase().includes(searchLower) ||
+          (project.team && project.team.toLowerCase().includes(searchLower)) ||
           (project.description && project.description.toLowerCase().includes(searchLower));
         
         if (!matchesSearch) return false;
@@ -87,7 +100,11 @@ const ProjectManager = () => {
     []
   );
 
-  const teams = ['Team Alpha', 'Team Beta', 'Team Gamma', 'Other'];
+  // Get unique teams from existing projects for filtering
+  const filterTeams = useMemo(() => {
+    if (!allTeams) return [];
+    return allTeams.filter(team => team.status === 'active');
+  }, [allTeams]);
   const statuses = [
     { value: 'planning', label: 'Planning', color: 'blue' },
     { value: 'in-progress', label: 'In Progress', color: 'yellow' },
@@ -211,14 +228,44 @@ const ProjectManager = () => {
             {pagination.totalItems} total projects {filteredProjects.length !== allProjects?.length && `(${filteredProjects.length} filtered)`}
           </p>
         </div>
-        <button
-          onClick={() => setShowAddForm(!showAddForm)}
-          className="btn-primary flex items-center space-x-2"
-        >
-          <Plus className="w-5 h-5" />
-          <span>New Project</span>
-        </button>
+        <div className="flex space-x-3">
+          <button
+            onClick={() => window.location.href = '/technical-writer-dashboard/teams'}
+            className="btn-secondary flex items-center space-x-2"
+          >
+            <Users className="w-5 h-5" />
+            <span>Manage Teams</span>
+          </button>
+          <button
+            onClick={() => setShowAddForm(!showAddForm)}
+            className="btn-primary flex items-center space-x-2"
+          >
+            <Plus className="w-5 h-5" />
+            <span>New Project</span>
+          </button>
+        </div>
       </div>
+
+      {/* Team Status Alert */}
+      {activeTeams && activeTeams.length === 0 && (
+        <div className="card border-l-4 border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20">
+          <div className="flex items-center space-x-3">
+            <AlertTriangle className="w-6 h-6 text-yellow-600" />
+            <div>
+              <h3 className="text-lg font-semibold text-yellow-800 dark:text-yellow-300">No Teams Available</h3>
+              <p className="text-sm text-yellow-600 dark:text-yellow-400">
+                You need to create teams before adding projects. 
+                <button 
+                  onClick={() => window.location.href = '/technical-writer-dashboard/teams'}
+                  className="ml-1 underline hover:no-underline"
+                >
+                  Manage teams here
+                </button>
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Search and Filters */}
       <div className="card">
@@ -264,8 +311,8 @@ const ProjectManager = () => {
               className="w-full px-4 py-2 border border-gray-300 dark:border-dark-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-dark-800 dark:text-gray-200"
             >
               <option value="all">All Teams</option>
-              {teams.map(team => (
-                <option key={team} value={team}>{team}</option>
+              {filterTeams.map(team => (
+                <option key={team.id} value={team.name}>{team.name}</option>
               ))}
             </select>
           </div>
@@ -343,12 +390,24 @@ const ProjectManager = () => {
                   aria-describedby="team-error"
                 >
                   <option value="">Select team...</option>
-                  {teams.map((team) => (
-                    <option key={team} value={team}>{team}</option>
+                  {activeTeams?.map((team) => (
+                    <option key={team.id} value={team.name}>{team.name}</option>
                   ))}
                 </select>
                 {!formData.team && (
                   <p id="team-error" className="mt-1 text-sm text-red-600">Team selection is required</p>
+                )}
+                {activeTeams && activeTeams.length === 0 && (
+                  <p className="mt-1 text-sm text-orange-600">
+                    No teams available. 
+                    <button 
+                      type="button"
+                      onClick={() => window.location.href = '/technical-writer-dashboard/teams'}
+                      className="ml-1 underline hover:no-underline"
+                    >
+                      Create a team first
+                    </button>
+                  </p>
                 )}
               </div>
 
@@ -467,7 +526,11 @@ const ProjectManager = () => {
               >
                 Cancel
               </button>
-              <button type="submit" className="btn-primary">
+              <button 
+                type="submit" 
+                className="btn-primary"
+                disabled={activeTeams && activeTeams.length === 0}
+              >
                 {editingProject ? 'Update' : 'Create'} Project
               </button>
             </div>

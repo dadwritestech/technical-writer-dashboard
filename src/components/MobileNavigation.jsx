@@ -4,6 +4,7 @@ import {
   LayoutDashboard, 
   Clock, 
   FolderOpen, 
+  Users,
   FileText, 
   Settings
 } from 'lucide-react';
@@ -15,6 +16,7 @@ const MobileNavigation = () => {
     { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
     { to: '/time', icon: Clock, label: 'Time' },
     { to: '/projects', icon: FolderOpen, label: 'Projects' },
+    { to: '/teams', icon: Users, label: 'Teams' },
     { to: '/weekly', icon: FileText, label: 'Weekly' },
     { to: '/settings', icon: Settings, label: 'Settings' },
   ];
