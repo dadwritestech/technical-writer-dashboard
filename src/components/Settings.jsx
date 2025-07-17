@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   Download, 
   Upload, 
@@ -9,7 +9,7 @@ import {
   Database,
   Shield
 } from 'lucide-react';
-import { exportData, importData } from '../utils/exportImport';
+import { exportData, importData, validateBackupFile, getExportSummary } from '../utils/exportImport';
 import { db } from '../utils/storage';
 import toast from 'react-hot-toast';
 
@@ -18,11 +18,24 @@ const Settings = () => {
     localStorage.getItem('lastBackupDate')
   );
   const [isDeleting, setIsDeleting] = useState(false);
+  const [exportSummary, setExportSummary] = useState(null);
   const fileInputRef = useRef(null);
+
+  // Load export summary on component mount
+  useEffect(() => {
+    loadExportSummary();
+  }, []);
+
+  const loadExportSummary = async () => {
+    const summary = await getExportSummary();
+    setExportSummary(summary);
+  };
 
   const handleExport = async () => {
     await exportData();
     setLastBackupDate(new Date().toISOString());
+    // Refresh export summary after export
+    await loadExportSummary();
   };
 
   const handleImportClick = () => {
@@ -32,7 +45,34 @@ const Settings = () => {
   const handleFileSelect = async (event) => {
     const file = event.target.files?.[0];
     if (file) {
+      // Validate file first
+      const validation = await validateBackupFile(file);
+      
+      if (!validation.valid) {
+        toast.error(`Invalid backup file: ${validation.error}`);
+        return;
+      }
+      
+      // Show file stats and confirmation
+      const stats = validation.stats;
+      const confirmMessage = `Import backup from ${stats.exportDate}?\n\n` +
+        `Projects: ${stats.projects}\n` +
+        `Teams: ${stats.teams}\n` +
+        `Time Blocks: ${stats.timeBlocks}\n` +
+        `Active Timers: ${stats.activeTimers}\n\n` +
+        `This will replace all existing data. Continue?`;
+      
+      const confirmed = window.confirm(confirmMessage);
+      if (!confirmed) {
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+        return;
+      }
+      
+      // Import with enhanced feedback
       await importData(file);
+      
       // Reset the file input
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
@@ -49,6 +89,8 @@ const Settings = () => {
     try {
       await db.timeBlocks.clear();
       await db.projects.clear();
+      await db.teams.clear();
+      await db.activeTimers.clear();
       await db.weeklySummaries.clear();
       await db.preferences.clear();
       
@@ -87,6 +129,34 @@ const Settings = () => {
         </div>
 
         <div className="space-y-4">
+          {/* Export Summary */}
+          {exportSummary && (
+            <div className="bg-blue-50 dark:bg-dark-700 p-4 rounded-lg">
+              <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">Export Summary</h4>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-gray-600 dark:text-gray-400">Projects</p>
+                  <p className="font-medium dark:text-gray-200">{exportSummary.counts.projects}</p>
+                </div>
+                <div>
+                  <p className="text-gray-600 dark:text-gray-400">Teams</p>
+                  <p className="font-medium dark:text-gray-200">{exportSummary.counts.teams}</p>
+                </div>
+                <div>
+                  <p className="text-gray-600 dark:text-gray-400">Time Blocks</p>
+                  <p className="font-medium dark:text-gray-200">{exportSummary.counts.timeBlocks}</p>
+                </div>
+                <div>
+                  <p className="text-gray-600 dark:text-gray-400">Active Timers</p>
+                  <p className="font-medium dark:text-gray-200">{exportSummary.counts.activeTimers}</p>
+                </div>
+              </div>
+              <div className="mt-3 pt-3 border-t border-blue-200 dark:border-dark-600">
+                <p className="text-sm text-gray-600 dark:text-gray-400">Total Records: {exportSummary.totalRecords}</p>
+              </div>
+            </div>
+          )}
+
           {/* Last Backup Info */}
           <div className="bg-gray-50 dark:bg-dark-700 p-4 rounded-lg">
             <p className="text-sm text-gray-600 dark:text-gray-400">Last Backup</p>
@@ -100,6 +170,11 @@ const Settings = () => {
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 Download a backup of all your data as a JSON file
               </p>
+              {exportSummary && (
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  {exportSummary.totalRecords} records ready for export
+                </p>
+              )}
             </div>
             <button
               onClick={handleExport}
@@ -116,6 +191,9 @@ const Settings = () => {
               <h4 className="font-medium">Import Data</h4>
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 Restore data from a backup file (this will replace all existing data)
+              </p>
+              <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                ⚠️ This will overwrite all current data. Export first as backup!
               </p>
             </div>
             <div>
@@ -190,7 +268,7 @@ const Settings = () => {
           <div className="bg-red-50 border border-red-200 rounded-lg p-4">
             <h4 className="font-medium text-red-800 mb-2">Clear All Data</h4>
             <p className="text-sm text-red-700 mb-4">
-              This will permanently delete all your time blocks, projects, and settings. 
+              This will permanently delete all your time blocks, projects, teams, active timers, and settings. 
               This action cannot be undone. Make sure to export your data first!
             </p>
 
